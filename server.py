@@ -1648,6 +1648,12 @@ def lanzar_grid(canales, calidad, token, mpv_path, sl_path, ffmpeg_path, ancho, 
 
     # ── VLC Mosaic via VLM ────────────────────────────────────────
     if player_type == "vlc" and vlc_mosaic:
+        if n_video == 0:
+            return False, (
+                "VLC Mosaic necesita al menos un canal con video. "
+                "Desactiva solo-audio en algun canal o usa el grid con FFmpeg."
+            ), [], fallidos
+
         video_pairs = list(zip(validos, urls))
         cols_m, rows_m, _, _ = write_vlm_conf(video_pairs, audio_pairs, ancho, alto)
 
@@ -1658,9 +1664,9 @@ def lanzar_grid(canales, calidad, token, mpv_path, sl_path, ffmpeg_path, ancho, 
         print("  Generando fondo negro para VLC mosaic...")
         gen = subprocess.run([
             ffmpeg_path, "-f", "lavfi", "-i",
-            f"color=c=black:s={ancho}x{alto}:r=1",
-            "-t", "3", "-vcodec", "libx264", "-preset", "ultrafast", "-crf", "51",
-            "-an", "-y", black_bg
+            f"color=c=black:s={ancho}x{alto}:r=30",
+            "-t", "3", "-vcodec", "libx264", "-preset", "ultrafast", "-crf", "35",
+            "-pix_fmt", "yuv420p", "-g", "30", "-an", "-f", "mpegts", "-y", black_bg
         ], capture_output=True, creationflags=cno)
 
         if not os.path.exists(black_bg) or os.path.getsize(black_bg) == 0:
@@ -1677,7 +1683,13 @@ def lanzar_grid(canales, calidad, token, mpv_path, sl_path, ffmpeg_path, ancho, 
             f"--mosaic-height={alto}",
             f"--mosaic-cols={cols_m}",
             f"--mosaic-rows={rows_m}",
+            f"--mosaic-order={','.join(str(i) for i in range(1, n_video + 1))}",
+            "--mosaic-position=1",
             "--mosaic-keep-aspect-ratio",
+            "--mosaic-keep-picture",
+            "--network-caching=1200",
+            "--live-caching=1200",
+            "--file-caching=300",
             "--qt-minimal-view",
             "--no-video-title-show",
             "--no-qt-privacy-ask",
@@ -1689,6 +1701,12 @@ def lanzar_grid(canales, calidad, token, mpv_path, sl_path, ffmpeg_path, ancho, 
         print(f"  VLM={VLM_CONF}")
         try:
             with open(log, "w", encoding="utf-8", errors="replace") as log_f:
+                log_f.write("VLC mosaic args:\n" + " ".join(vlc_args) + "\n\n")
+                try:
+                    with open(VLM_CONF, "r", encoding="utf-8", errors="replace") as vlm_f:
+                        log_f.write("VLM conf:\n" + vlm_f.read() + "\n\n")
+                except Exception as e:
+                    log_f.write(f"No se pudo leer VLM conf: {e}\n\n")
                 vlc = popen_gui(vlc_args, stdout=log_f, stderr=log_f)
             all_validos = validos + [c for c, _ in audio_pairs]
             grid_proc = {
@@ -1718,19 +1736,31 @@ def lanzar_grid(canales, calidad, token, mpv_path, sl_path, ffmpeg_path, ancho, 
 
     parts = []
     for i in range(n_video):
-        parts.append(f"[{i}:v]scale={w}:{h},setpts=PTS-STARTPTS[v{i}]")
+        parts.append(
+            f"[{i}:v]scale={w}:{h}:force_original_aspect_ratio=decrease,"
+            f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=black,"
+            f"fps=30,setsar=1,setpts=PTS-STARTPTS[v{i}]"
+        )
     for i in range(n_audio):          # tile negro para cada canal solo-audio
-        parts.append(f"color=black:size={w}x{h}:rate=30[v{n_video+i}]")
+        parts.append(f"color=black:size={w}x{h}:rate=30,setsar=1[v{n_video+i}]")
     for i in range(n_total, total):   # padding si la cuadrícula no es exacta
-        parts.append(f"color=black:size={w}x{h}:rate=30[v{i}]")
+        parts.append(f"color=black:size={w}x{h}:rate=30,setsar=1[v{i}]")
 
     positions = [f"{(i%cols)*w}_{(i//cols)*h}" for i in range(total)]
     xin = "".join(f"[v{i}]" for i in range(total))
-    fc  = ";".join(parts) + f";{xin}xstack=inputs={total}:layout={'|'.join(positions)}[vout]"
+    fc  = (
+        ";".join(parts)
+        + f";{xin}xstack=inputs={total}:layout={'|'.join(positions)},"
+        + "format=yuv420p,fps=30,setpts=N/(30*TB)[vout]"
+    )
 
     # amix: canales video [0..n_video-1] + canales audio [n_video..n_total-1]
     n_amix = n_total
-    filter_audio = "".join(f"[{i}:a]" for i in range(n_amix)) + f"amix=inputs={n_amix}:duration=longest[aout]"
+    filter_audio = (
+        "".join(f"[{i}:a]" for i in range(n_amix))
+        + f"amix=inputs={n_amix}:duration=longest:dropout_transition=2,"
+        + "aresample=async=1:first_pts=0[aout]"
+    )
     fc_completo  = fc + ";" + filter_audio
 
     _ff_threads = max(2, (os.cpu_count() or 4) // 2)
@@ -1752,26 +1782,43 @@ def lanzar_grid(canales, calidad, token, mpv_path, sl_path, ffmpeg_path, ancho, 
     else:
         ff_base += ["-c:v","libx264","-preset","ultrafast","-tune","zerolatency","-crf","23"]
 
-    ff_base += ["-c:a","aac","-ac","2"]
+    ff_base += [
+        "-g", "60", "-keyint_min", "60", "-sc_threshold", "0",
+        "-c:a", "aac", "-ac", "2", "-ar", "48000", "-b:a", "160k",
+    ]
 
     try:
         log_f = open(log, "w", encoding="utf-8", errors="replace")
 
         if player_type == "vlc":
             # ffmpeg → VLC pipe (modo fallback)
-            ff_args  = ff_base + ["-f", "mpegts", "pipe:1"]
-            vlc_args = [vlc_path, "--meta-title=StreamHub", "--qt-minimal-view", "--no-video-title-show",
+            ff_args  = ff_base + [
+                "-fflags", "+genpts", "-muxdelay", "0", "-muxpreload", "0",
+                "-mpegts_flags", "+resend_headers", "-f", "mpegts", "pipe:1"
+            ]
+            vlc_args = [vlc_path, "--meta-title=StreamHub", "--demux=ts",
+                        "--network-caching=800", "--live-caching=800",
+                        "--qt-minimal-view", "--no-video-title-show",
                         "--no-qt-privacy-ask", "--no-qt-error-dialogs", "--no-media-library",
                         f"--width={ancho}", f"--height={alto}", "-"]
+            log_f.write("FFmpeg args:\n" + " ".join(ff_args) + "\n\n")
+            log_f.write("VLC args:\n" + " ".join(vlc_args) + "\n\n")
             ff = subprocess.Popen(ff_args, stdout=subprocess.PIPE, stderr=log_f, creationflags=cno)
             pl = popen_gui(vlc_args, stdin=ff.stdout, stdout=log_f, stderr=log_f)
             ff.stdout.close()
             log_f.close()
         else:
             # mpv
-            ff_args = ff_base + ["-f","matroska","pipe:1"]
+            ff_args = ff_base + [
+                "-fflags", "+genpts", "-muxdelay", "0", "-muxpreload", "0",
+                "-mpegts_flags", "+resend_headers", "-f", "mpegts", "pipe:1"
+            ]
             pl_args = [mpv_path, "--title=StreamHub", "--force-window=yes",
-                       "--no-cache", "--volume=100", "-"]
+                       "--profile=low-latency", "--demuxer-lavf-format=mpegts",
+                       "--cache=yes", "--demuxer-readahead-secs=1",
+                       "--volume=100", "-"]
+            log_f.write("FFmpeg args:\n" + " ".join(ff_args) + "\n\n")
+            log_f.write("mpv args:\n" + " ".join(pl_args) + "\n\n")
             ff = subprocess.Popen(ff_args, stdout=subprocess.PIPE, stderr=log_f, creationflags=cno)
             pl = subprocess.Popen(pl_args, stdin=ff.stdout, stdout=log_f, stderr=log_f)
             ff.stdout.close()

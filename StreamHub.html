@@ -1923,6 +1923,10 @@ async function launchGrid() {
   if (!gridTargets.length) { toast('Marca al menos un canal para grid'); return; }
   const videoTargets = gridTargets.filter(c => !c.audioOnly);
   const audioTargets = gridTargets.filter(c => c.audioOnly);
+  if (settings.player === 'vlc' && !settings.vlcFfmpeg && !videoTargets.length) {
+    toast('VLC Mosaic necesita al menos un canal con video');
+    return;
+  }
   setDot('warn', 'Preparando grid...');
   toast('Preparando grid...');
   try {
