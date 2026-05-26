@@ -88,6 +88,24 @@ Tambien puedes iniciar manualmente:
 python server.py
 ```
 
+## Actualizacion
+
+Para actualizar el repo desde `origin/main` sin pisar cambios locales:
+
+### Windows
+
+```bat
+actualizar.bat
+```
+
+### Linux
+
+```bash
+bash actualizar.sh
+```
+
+El actualizador se detiene si detecta cambios locales en archivos versionados. No hace `git reset` ni sobrescribe `config.json`, logs, runtime ni credenciales locales.
+
 ## Configuracion
 
 La configuracion principal vive en `config.json`. Puedes partir de `config.example.json` si necesitas reconstruirla.
