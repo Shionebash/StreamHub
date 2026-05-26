@@ -1350,7 +1350,7 @@ def get_channel_videos(channel, token, client_id, cursor="", video_type="archive
         video_type = "archive"
     if not token or not client_id or not channel:
         return {"channel": channel, "display_name": channel, "avatar": "", "videos": [], "cursor": ""}
-    key = ("videos", channel, cursor, video_type, client_id, hash(token))
+    key = ("videos-v2", channel, cursor, video_type, client_id, hash(token))
     return cached_twitch_api(key, TWITCH_API_CACHE_TTL["videos"], lambda: _get_channel_videos_uncached(channel, token, client_id, cursor, video_type))
 
 def _get_channel_videos_uncached(channel, token, client_id, cursor="", video_type="archive"):
@@ -1377,12 +1377,17 @@ def _get_channel_videos_uncached(channel, token, client_id, cursor="", video_typ
         with urllib.request.urlopen(req, timeout=8) as r:
             data = json.loads(r.read())
         videos = []
+        user_login = user.get("login", channel).lower()
+        user_display = user.get("display_name", channel)
         for v in data.get("data", []):
             thumb = v.get("thumbnail_url", "")
-            thumb = thumb.replace("%{width}", "320").replace("%{height}", "180")
-            thumb = thumb.replace("{width}", "320").replace("{height}", "180")
+            thumb = thumb.replace("%{width}", "640").replace("%{height}", "360")
+            thumb = thumb.replace("{width}", "640").replace("{height}", "360")
             videos.append({
                 "id": str(v.get("id", "")),
+                "user_login": user_login,
+                "user_name": user_display,
+                "user_avatar": user.get("profile_image_url", ""),
                 "title": v.get("title", ""),
                 "description": v.get("description", ""),
                 "duration": v.get("duration", ""),
@@ -1403,6 +1408,40 @@ def _get_channel_videos_uncached(channel, token, client_id, cursor="", video_typ
     except Exception as e:
         print(f"  Error videos {channel}: {e}")
         return {"channel": channel, "display_name": channel, "avatar": "", "videos": [], "cursor": ""}
+
+def get_video_info_by_ids(vod_ids, token, client_id):
+    vod_ids = [v for v in (normalize_vod_id(i) for i in (vod_ids or [])) if v][:100]
+    if not token or not client_id or not vod_ids:
+        return []
+    key = ("vod_info", tuple(sorted(vod_ids)), client_id, hash(token))
+    return cached_twitch_api(key, TWITCH_API_CACHE_TTL["videos"], lambda: _get_video_info_by_ids_uncached(vod_ids, token, client_id))
+
+def _get_video_info_by_ids_uncached(vod_ids, token, client_id):
+    try:
+        query = "&".join(f"id={urllib.parse.quote(v)}" for v in vod_ids)
+        url = f"https://api.twitch.tv/helix/videos?{query}"
+        req = urllib.request.Request(url, headers=twitch_headers(token, client_id))
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read())
+        result = []
+        for v in data.get("data", []):
+            thumb = v.get("thumbnail_url", "")
+            thumb = thumb.replace("%{width}", "640").replace("%{height}", "360")
+            thumb = thumb.replace("{width}", "640").replace("{height}", "360")
+            result.append({
+                "id": str(v.get("id", "")),
+                "user_login": v.get("user_login", ""),
+                "user_name": v.get("user_name", ""),
+                "title": v.get("title", ""),
+                "thumbnail": thumb,
+                "duration": v.get("duration", ""),
+                "views": v.get("view_count", 0),
+                "created_at": v.get("created_at", ""),
+            })
+        return result
+    except Exception as e:
+        print(f"  Error vod_info {vod_ids}: {e}")
+        return []
 
 def get_user_info(canales, token, client_id):
     if not token or not client_id or not canales:
@@ -1604,7 +1643,8 @@ def lanzar_ventana(canal, calidad, token, mpv_path, sl_path, player_type="mpv", 
     # Normal mode: streamlink pipes to player
     if player_type == "vlc":
         player_bin  = vlc_path
-        player_args = "--qt-minimal-view --no-video-title-show --no-one-instance --no-qt-privacy-ask --no-qt-error-dialogs --no-media-library"
+        _vlc_qt_flags = " --qt-minimal-view --no-qt-privacy-ask --no-qt-error-dialogs" if sys.platform == "win32" else ""
+        player_args = f"--no-video-title-show --no-one-instance --no-media-library{_vlc_qt_flags}"
     else:
         player_bin  = mpv_path
         player_args = f"--title={display_title or canal} --force-window=yes --volume=70 --audio-exclusive=no"
@@ -1812,13 +1852,14 @@ def lanzar_grid(canales, calidad, token, mpv_path, sl_path, ffmpeg_path, ancho, 
             "--network-caching=1200",
             "--live-caching=1200",
             "--file-caching=300",
-            "--qt-minimal-view",
             "--no-video-title-show",
-            "--no-qt-privacy-ask",
-            "--no-qt-error-dialogs",
             "--no-media-library",
             "--meta-title=StreamHub",
         ]
+        # Qt-interface-specific flags: safe on Windows/macOS (Qt VLC default),
+        # skip on Linux where VLC may use a different interface (GTK, etc.)
+        if sys.platform == "win32":
+            vlc_args += ["--qt-minimal-view", "--no-qt-privacy-ask", "--no-qt-error-dialogs"]
         print(f"  VLC mosaic {cols_m}x{rows_m} ({n_video} vid + {n_audio} audio)")
         print(f"  VLM={VLM_CONF}")
         try:
@@ -1918,14 +1959,14 @@ def lanzar_grid(canales, calidad, token, mpv_path, sl_path, ffmpeg_path, ancho, 
                 "-fflags", "+genpts", "-muxdelay", "0", "-muxpreload", "0",
                 "-mpegts_flags", "+resend_headers", "-f", "mpegts", "pipe:1"
             ]
+            _vlc_qt = ["--qt-minimal-view", "--no-qt-privacy-ask", "--no-qt-error-dialogs"] if sys.platform == "win32" else []
             vlc_args = [vlc_path, "--meta-title=StreamHub", "--demux=ts",
                         "--network-caching=800", "--live-caching=800",
-                        "--qt-minimal-view", "--no-video-title-show",
-                        "--no-qt-privacy-ask", "--no-qt-error-dialogs", "--no-media-library",
-                        f"--width={ancho}", f"--height={alto}", "-"]
+                        "--no-video-title-show", "--no-media-library",
+                        f"--width={ancho}", f"--height={alto}", "-"] + _vlc_qt
             log_f.write("FFmpeg args:\n" + " ".join(ff_args) + "\n\n")
             log_f.write("VLC args:\n" + " ".join(vlc_args) + "\n\n")
-            ff = subprocess.Popen(ff_args, stdout=subprocess.PIPE, stderr=log_f, creationflags=cno)
+            ff = popen_gui(ff_args, stdout=subprocess.PIPE, stderr=log_f)
             pl = popen_gui(vlc_args, stdin=ff.stdout, stdout=log_f, stderr=log_f)
             ff.stdout.close()
             log_f.close()
@@ -1941,8 +1982,8 @@ def lanzar_grid(canales, calidad, token, mpv_path, sl_path, ffmpeg_path, ancho, 
                        "--volume=100", "-"]
             log_f.write("FFmpeg args:\n" + " ".join(ff_args) + "\n\n")
             log_f.write("mpv args:\n" + " ".join(pl_args) + "\n\n")
-            ff = subprocess.Popen(ff_args, stdout=subprocess.PIPE, stderr=log_f, creationflags=cno)
-            pl = subprocess.Popen(pl_args, stdin=ff.stdout, stdout=log_f, stderr=log_f)
+            ff = popen_gui(ff_args, stdout=subprocess.PIPE, stderr=log_f)
+            pl = popen_gui(pl_args, stdin=ff.stdout, stdout=log_f, stderr=log_f)
             ff.stdout.close()
             log_f.close()
 
@@ -1975,13 +2016,22 @@ def kill_proc(proc):
             )
         else:
             proc.terminate()
+            try:
+                proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                proc.kill()
     except Exception:
         pass
 
 def popen_gui(args, stdout=None, stderr=None, stdin=None, cwd=None):
     flags = 0
+    kwargs = {}
     if sys.platform == "win32":
         flags = subprocess.CREATE_NO_WINDOW
+    else:
+        # New session on Linux/macOS: grid/player processes survive terminal
+        # close and are isolated from SIGINT sent to the server's process group.
+        kwargs["start_new_session"] = True
     popen = globals().get("_ORIG_SUBPROCESS_POPEN", subprocess.Popen)
     return popen(
         args,
@@ -1989,7 +2039,8 @@ def popen_gui(args, stdout=None, stderr=None, stdin=None, cwd=None):
         stdout=stdout if stdout is not None else subprocess.DEVNULL,
         stderr=stderr if stderr is not None else subprocess.DEVNULL,
         cwd=cwd,
-        creationflags=flags
+        creationflags=flags,
+        **kwargs
     )
 
 def vlc_gui_path(vlc_path):
@@ -2268,6 +2319,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store, max-age=0")
+        self.send_header("Pragma", "no-cache")
         self.add_cors_headers()
         self.end_headers()
         try:
@@ -2322,6 +2375,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store, max-age=0")
+            self.send_header("Pragma", "no-cache")
             self.add_cors_headers()
             self.end_headers()
             self.wfile.write(body)
@@ -2400,6 +2455,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             video_type = qs.get("type", ["archive"])[0]
             data = get_channel_videos(canal, token, client_id, cursor, video_type)
             self.send_json({"ok": True, **data})
+
+        elif parsed.path == "/api/vod_info":
+            token, client_id = get_config_credentials()
+            ids_raw = qs.get("ids", [""])[0]
+            vod_ids = [i.strip() for i in ids_raw.split(",") if i.strip()]
+            videos = get_video_info_by_ids(vod_ids, token, client_id)
+            self.send_json({"ok": True, "videos": videos})
 
         elif parsed.path == "/api/token_status":
             expired = gql_is_token_expired()
@@ -2566,13 +2628,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_json({"ok": True, "msg": "Reiniciando servidor"})
             cno = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
             def _do_restart():
-                time.sleep(0.4)
-                subprocess.Popen(
-                    [sys.executable, os.path.abspath(__file__)],
-                    cwd=BASE,
-                    creationflags=cno
+                time.sleep(0.3)
+                script = (
+                    "import subprocess,sys,time,os;"
+                    "time.sleep(1.0);"
+                    "subprocess.Popen([sys.executable, os.path.abspath('server.py')], cwd=os.getcwd())"
                 )
-                time.sleep(0.1)
+                subprocess.Popen([sys.executable, "-c", script], cwd=BASE, creationflags=cno)
                 os._exit(0)
             threading.Thread(target=_do_restart, daemon=True).start()
 
@@ -2581,7 +2643,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
 class ReuseServer(http.server.ThreadingHTTPServer):
-    allow_reuse_address = True
+    allow_reuse_address = False
 
 def _ensure_default_config():
     """Crea config.json con valores por defecto si no existe."""
@@ -2673,7 +2735,21 @@ def main():
     # GQL uses Twitch's web client ID; the configured Client ID is only for Helix.
     # Using arbitrary Helix app IDs here causes Twitch GQL to return HTTP 400.
 
-    server = ReuseServer((HOST, PORT), Handler)
+    try:
+        server = ReuseServer((HOST, PORT), Handler)
+    except OSError as e:
+        if getattr(e, "winerror", None) == 10048 or getattr(e, "errno", None) in (48, 98, 10048):
+            print(f"""
+  +==========================================+
+  |      StreamHub ya esta abierto           |
+  +==========================================+
+  http://{HOST}:{PORT}/StreamHub.html
+
+  El puerto {PORT} ya esta en uso. Si la pagina no responde,
+  cierra el proceso python.exe de StreamHub y vuelve a iniciar.
+""")
+            return
+        raise
 
     # Arrancar mining automáticamente si estaba habilitado
     cfg = load_config()

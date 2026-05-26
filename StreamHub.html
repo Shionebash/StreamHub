@@ -588,6 +588,9 @@ input[type="checkbox"],input[type="color"]{accent-color:var(--accent)!important;
 .vod-thumb .no-img{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:30px;opacity:.1;}
 .vod-body{padding:10px;min-width:0;display:flex;flex-direction:column;gap:7px;min-height:132px;}
 .vod-name{font-size:13px;font-weight:800;color:var(--text);line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.vod-channel{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--accent);min-width:0;}
+.vod-channel img{width:18px;height:18px;border-radius:5px;object-fit:cover;flex-shrink:0;}
+.vod-channel span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .vod-meta{font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.45;}
 .vod-actions{display:flex;gap:6px;margin-top:auto;}
 .vod-pager{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:6px;padding:4px 0 2px;flex-wrap:wrap;}
@@ -1277,6 +1280,9 @@ function isVod(ch) {
 function mediaLabel(ch) {
   return isVod(ch) ? (ch.displayName || ('VOD ' + ch.vodId)) : ch.name;
 }
+function mediaChannelLabel(ch) {
+  return ch?.channelName || ch?.channelLogin || '';
+}
 function mediaPlayPayload(ch) {
   return isVod(ch) ? { canal:ch.name, vod_id:ch.vodId } : { canal:ch.name };
 }
@@ -1286,6 +1292,8 @@ function makeQueueItem(entry, overrides={}) {
     type: entry.type || 'channel',
     vodId: entry.vodId || '',
     displayName: entry.displayName || entry.name,
+    channelLogin: entry.channelLogin || '',
+    channelName: entry.channelName || '',
     status:'idle',
     audioOnly:false,
     gridEnabled:true,
@@ -1333,13 +1341,13 @@ function imageMarkup(src, fallback='▶') {
   if (settings.textOnly) return '';
   const url = String(src || '');
   if (!/^https:\/\/[^\s"'<>]+$/.test(url)) return `<div class="no-img">${escapeHtml(fallback)}</div>`;
-  return `<img src="${escapeHtml(url)}" loading="lazy" onerror="this.style.display='none'">`;
+  return `<img src="${escapeHtml(url)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'no-img',textContent:'${escapeHtml(fallback)}'}))">`;
 }
 function avatarMarkup(src, name) {
   if (settings.textOnly) return escapeHtml(initials(name));
   const url = String(src || '');
   if (!/^https:\/\/[^\s"'<>]+$/.test(url)) return escapeHtml(initials(name));
-  return `<img src="${escapeHtml(url)}" alt="${escapeHtml(name)}" loading="lazy" onerror="this.replaceWith(document.createTextNode('${escapeHtml(initials(name))}'))">`;
+  return `<img src="${escapeHtml(url)}" alt="${escapeHtml(name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('${escapeHtml(initials(name))}'))">`;
 }
 function streamPreviewMarkup(info, name) {
   const thumb = String(info?.thumbnail || '');
@@ -1414,6 +1422,7 @@ function handleGlobalSearchKey(event) {
   save();
   render();
   checkQueueLive();
+  if (entry.type === 'vod' && entry.vodId) fetchVodMeta([entry.vodId]);
 }
 
 function applyTextOnlyMode() {
@@ -1438,7 +1447,7 @@ function toggleTextOnly() {
 }
 
 function save() {
-  storageSet('channels', JSON.stringify(channels.map(c => ({ name:c.name, type:c.type || 'channel', vodId:c.vodId || '', displayName:c.displayName || c.name, audioOnly:c.audioOnly||false, gridEnabled:c.gridEnabled !== false }))));
+  storageSet('channels', JSON.stringify(channels.map(c => ({ name:c.name, type:c.type || 'channel', vodId:c.vodId || '', displayName:c.displayName || c.name, channelLogin:c.channelLogin || '', channelName:c.channelName || '', audioOnly:c.audioOnly||false, gridEnabled:c.gridEnabled !== false }))));
   storageSet('favorites', JSON.stringify(favorites));
   storageSet('dropsTarget', dropsTarget || '');
   const safeSettings = { ...settings, token:'', refresh_token:'' };
@@ -1459,7 +1468,7 @@ function load() {
     const ch = storageGet('channels');
     if (ch) JSON.parse(ch).forEach(o => {
       const entry = parseTwitchEntry(typeof o==='string'?o:(o.vodId ? ('v' + o.vodId) : o.name));
-      if (entry) channels.push(makeQueueItem({ ...entry, displayName:o.displayName || entry.displayName }, { audioOnly: o.audioOnly||false, gridEnabled: o.gridEnabled !== false }));
+      if (entry) channels.push(makeQueueItem({ ...entry, displayName:o.displayName || entry.displayName, channelLogin:o.channelLogin || '', channelName:o.channelName || '' }, { audioOnly: o.audioOnly||false, gridEnabled: o.gridEnabled !== false }));
     });
     const fv = storageGet('favorites');
     if (fv) favorites = JSON.parse(fv).map(safeChannel).filter(Boolean);
@@ -1688,6 +1697,44 @@ function setDot(state, text) {
   el.style.color = state==='ok' ? 'var(--green)' : state==='err' ? 'var(--red)' : 'var(--gold)';
 }
 
+async function fetchVodMeta(vodIds) {
+  if (!vodIds || !vodIds.length) return;
+  const missing = vodIds.filter(id => {
+    const key = 'v' + id;
+    const cached = liveMediaCache[key];
+    return !cached || !cached.thumbnail;
+  });
+  if (!missing.length) return;
+  try {
+    const r = await apiFetch('/api/vod_info?ids=' + missing.join(','), { signal: AbortSignal.timeout(6000) });
+    if (!r.ok) return;
+    const d = await r.json();
+    const now = Date.now();
+    (d.videos || []).forEach(v => {
+      if (!v.id) return;
+      const key = 'v' + v.id;
+      liveMediaCache[key] = {
+        display_name: v.title || ('VOD ' + v.id),
+        thumbnail: v.thumbnail || '',
+        title: v.title || '',
+        game: '',
+        avatar: '',
+        channelLogin: v.user_login || '',
+        channelName: v.user_name || '',
+        cachedAt: now,
+      };
+      const ch = channels.find(c => c.name === key);
+      if (ch) {
+        if (!ch.channelLogin && v.user_login) ch.channelLogin = v.user_login;
+        if (!ch.channelName && v.user_name)  ch.channelName  = v.user_name;
+        if (ch.displayName === 'VOD ' + v.id && v.title) ch.displayName = v.title;
+      }
+    });
+    try { storageSet('liveMedia', JSON.stringify(liveMediaCache)); } catch(e) {}
+    render();
+  } catch(e) {}
+}
+
 // ── CHANNELS (COLA) ──
 function addChannel(name) {
   const inp = document.getElementById('ch-input');
@@ -1698,6 +1745,7 @@ function addChannel(name) {
   if (!name) inp.value = '';
   save(); render();
   checkQueueLive();
+  if (entry.type === 'vod' && entry.vodId) fetchVodMeta([entry.vodId]);
 }
 function removeChannel(name) {
   const ch = channels.find(c => c.name === name);
@@ -2488,14 +2536,21 @@ function renderVods() {
     const inQ = channels.some(c => c.name === key);
     const thumb = v.thumbnail ? imageMarkup(v.thumbnail, 'VOD') : '<div class="no-img">VOD</div>';
     const meta = [v.duration, formatVodDate(v.created_at || v.published_at), `${formatViewers(v.views || 0)} views`].filter(Boolean).join(' · ');
+    const ownerLogin = safeChannel(v.user_login || vodState.channel);
+    const ownerName = v.user_name || vodState.displayName || ownerLogin;
+    const ownerAvatar = v.user_avatar || vodState.avatar || '';
+    const ownerMarkup = ownerAvatar
+      ? `<img src="${escapeHtml(ownerAvatar)}" alt="${escapeHtml(ownerName)}" referrerpolicy="no-referrer" onerror="this.remove()"><span>${escapeHtml(ownerName)} · @${escapeHtml(ownerLogin)}</span>`
+      : `<span>@${escapeHtml(ownerLogin)}</span>`;
     return `<div class="vod-row">
       <div class="vod-thumb">${thumb}</div>
       <div class="vod-body">
         <div class="vod-name" title="${escapeHtml(v.title || '')}">${escapeHtml(v.title || ('VOD ' + id))}</div>
+        <div class="vod-channel">${ownerMarkup}</div>
         <div class="vod-meta">${escapeHtml(meta)}</div>
         <div class="vod-actions">
-          <button class="btn btn-p btn-sm" onclick="addVodToQueue('${id}','${encodeURIComponent(v.title || '')}')" ${inQ?'disabled':''}>${inQ?'En cola':'Añadir'}</button>
-          <button class="btn btn-sm" onclick="playVodFromPanel('${id}','${encodeURIComponent(v.title || '')}')">Abrir</button>
+          <button class="btn btn-p btn-sm" onclick="addVodToQueue('${id}','${encodeURIComponent(v.title || '')}','${ownerLogin}','${encodeURIComponent(ownerName)}')" ${inQ?'disabled':''}>${inQ?'En cola':'Añadir'}</button>
+          <button class="btn btn-sm" onclick="playVodFromPanel('${id}','${encodeURIComponent(v.title || '')}','${ownerLogin}','${encodeURIComponent(ownerName)}')">Abrir</button>
         </div>
       </div>
     </div>`;
@@ -2512,11 +2567,13 @@ function renderVodPager(pageCount) {
   const more = vodState.cursor ? `<button class="vod-page-btn" onclick="loadVods(true)">Mas</button>` : '';
   return `<div class="vod-pager">${pages}${more}</div>`;
 }
-function addVodToQueue(id, encodedTitle='') {
+function addVodToQueue(id, encodedTitle='', ownerLogin='', encodedOwnerName='') {
   const vodId = safeVodId(id);
   if (!vodId) return;
   const title = decodeURIComponent(encodedTitle || '');
-  const entry = { name:'v' + vodId, type:'vod', vodId, displayName:title ? title.slice(0, 80) : ('VOD ' + vodId) };
+  const channelLogin = safeChannel(ownerLogin || vodState.channel);
+  const channelName = decodeURIComponent(encodedOwnerName || '') || vodState.displayName || channelLogin;
+  const entry = { name:'v' + vodId, type:'vod', vodId, displayName:title ? title.slice(0, 80) : ('VOD ' + vodId), channelLogin, channelName };
   if (!channels.some(c => c.name === entry.name)) {
     channels.push(makeQueueItem(entry));
     save(); render(); renderVods();
@@ -2525,8 +2582,8 @@ function addVodToQueue(id, encodedTitle='') {
     toast('VOD ya esta en la cola');
   }
 }
-async function playVodFromPanel(id, encodedTitle='') {
-  addVodToQueue(id, encodedTitle);
+async function playVodFromPanel(id, encodedTitle='', ownerLogin='', encodedOwnerName='') {
+  addVodToQueue(id, encodedTitle, ownerLogin, encodedOwnerName);
   await delay(100);
   await playChannel('v' + safeVodId(id));
 }
@@ -2669,7 +2726,10 @@ function channelGradient(name) {
   return `linear-gradient(135deg,hsl(${h} 72% 38%),hsl(${(h + 38) % 360} 68% 22%))`;
 }
 function channelSubtitle(ch) {
-  if (isVod(ch)) return ch.audioOnly ? 'VOD · solo audio' : 'VOD de Twitch';
+  if (isVod(ch)) {
+    const owner = mediaChannelLabel(ch);
+    return owner ? `VOD · ${owner}` : (ch.audioOnly ? 'VOD · solo audio' : 'VOD de Twitch');
+  }
   const ql = liveInfo(ch.name);
   if (ql.live) return ql.game || ql.title || 'Live ahora';
   if (ch.offlineDetected) return 'Offline detectado';
@@ -3220,6 +3280,7 @@ document.addEventListener('keydown', e => {
 load();
 applyAccentColor();
 render();
+fetchVodMeta(channels.filter(isVod).map(c => c.vodId));
 // reconectar IRC para canales activos al recargar
 channels.filter(c => !isVod(c) && (c.status==='playing'||c.status==='grid-on')).forEach(c => connectIRC(c.name));
 updateEventChatSelector();

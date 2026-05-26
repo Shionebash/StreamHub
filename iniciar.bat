@@ -15,6 +15,6 @@ if exist "%VENV_DIR%\Scripts\python.exe" (
     )
 )
 
+start "StreamHub Server" %PYTHON_EXE% server.py
+timeout /t 1 /nobreak >nul
 start "" "http://localhost:8080/StreamHub.html"
-%PYTHON_EXE% server.py
-pause
