@@ -18,7 +18,7 @@
   --green:#3fb85a;--red:#e0553a;--gold:#f0a830;--blue:#3a8af0;
   --mono:'JetBrains Mono',monospace;--sans:'Nunito',sans-serif;
   --radius:12px;--radius-sm:8px;
-  --sidebar-w:300px;--fs:14px;
+  --sidebar-w:400px;--fs:14px;
 }
 [data-theme="night"]{
   --bg:#0d0f18;--surface:#131625;--surface2:#1a1d30;--surface3:#22263c;
@@ -169,21 +169,28 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:va
 ══════════════════════════════════════════ */
 #channel-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding:0 10px 10px;}
 
-.ch-item{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:9px;background:transparent;
+.ch-item{display:grid;grid-template-columns:36px minmax(68px,1fr) auto;align-items:center;gap:8px;background:transparent;
   border:1.5px solid transparent;border-radius:var(--radius-sm);padding:7px 8px;transition:all .15s;min-height:52px;}
 .ch-item:hover{background:var(--surface2);border-color:var(--border);box-shadow:0 2px 8px rgba(0,0,0,.05);}
 .ch-item.playing{background:var(--accent-3);border-color:var(--accent);}
 .ch-item.grid-on{background:rgba(58,138,240,.07);border-color:rgba(58,138,240,.4);}
 .ch-item.loading{background:rgba(240,168,48,.07);border-color:rgba(240,168,48,.4);}
 .ch-item.error{border-color:rgba(224,85,58,.35);}
-.ch-item.offline-detected{background:rgba(240,168,48,.06);border-color:rgba(240,168,48,.4);}
+.ch-item.offline{background:rgba(110,98,88,.06);border-color:rgba(110,98,88,.18);opacity:.82;}
+.ch-item.offline .ch-avatar{filter:grayscale(1) saturate(.45);opacity:.62;box-shadow:inset 0 0 0 2px rgba(110,98,88,.24);}
+.ch-item.offline .ch-name{color:var(--muted);}
+.ch-item.offline .ch-sub{color:var(--dim);}
+.ch-item.offline-detected{position:relative;background:rgba(224,85,58,.08);border-color:rgba(224,85,58,.5);box-shadow:inset 4px 0 0 var(--red);}
+.ch-item.offline-detected .ch-avatar{filter:grayscale(1) saturate(.55);opacity:.72;box-shadow:0 0 0 2px var(--red),0 0 0 4px rgba(224,85,58,.14);}
+.ch-item.offline-detected .ch-name{color:var(--red);}
+.ch-item.offline-detected .ch-sub{color:#9b5c4f;}
 
 .ch-avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;
   flex-shrink:0;font-family:var(--mono);font-size:13px;font-weight:700;color:#fff;overflow:hidden;}
 .ch-avatar.live{box-shadow:0 0 0 2px var(--red),0 0 0 4px rgba(224,85,58,.2);}
 .ch-avatar img,.dc-avatar img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;}
 
-.ch-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.ch-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;overflow:hidden;}
 .ch-line{display:flex;align-items:center;gap:6px;min-width:0;}
 .ch-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ch-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -194,6 +201,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:va
 .ch-badge.win{background:var(--accent-2);color:var(--accent);}
 .ch-badge.grid{background:rgba(58,138,240,.12);color:var(--blue);border-color:rgba(58,138,240,.25);}
 .ch-badge.err{background:rgba(224,85,58,.1);color:var(--red);}
+.ch-badge.offline{background:rgba(110,98,88,.1);color:var(--muted);border-color:rgba(110,98,88,.24);}
+.ch-badge.off-alert{background:rgba(224,85,58,.14);color:var(--red);border-color:rgba(224,85,58,.38);}
 
 .ch-actions{display:grid;grid-template-columns:repeat(8,26px);gap:4px;flex-shrink:0;opacity:.9;transition:opacity .15s;align-items:center;}
 .ch-item:hover .ch-actions,.ch-item.playing .ch-actions,.ch-item.grid-on .ch-actions,.ch-item.loading .ch-actions{opacity:1;}
@@ -658,7 +667,7 @@ body.text-only .cat-card img,body.text-only .cat-card .no-img{display:none!impor
   .dash-stats{grid-template-columns:repeat(2,1fr);}
 }
 @media(max-width:900px){
-  #left{width:260px!important;}
+  #left{width:340px!important;}
   .top-search{display:none;}
   #esidebar.open{width:300px;}
   #esidebar-inner{width:300px;}
@@ -1103,9 +1112,9 @@ body.text-only .cat-card img,body.text-only .cat-card .no-img{display:none!impor
     <div class="tw-section">
       <div class="tw-slider-row">
         <span class="tw-slider-label">Ancho del sidebar</span>
-        <span class="tw-slider-val" id="tw-sw-val">300px</span>
+        <span class="tw-slider-val" id="tw-sw-val">400px</span>
       </div>
-      <input type="range" class="tw-slider" id="tw-sw-slider" min="220" max="420" step="10" value="300"
+      <input type="range" class="tw-slider" id="tw-sw-slider" min="340" max="520" step="10" value="400"
         oninput="applyTweakSw(parseInt(this.value))">
     </div>
     <div class="tw-divider"></div>
@@ -2456,7 +2465,8 @@ function renderChannels() {
     const isLoad = ch.status === 'loading';
     const isFav = favorites.includes(ch.name);
     const liveNow = !!ql.live || ch.lastLive === true;
-    el.className = `ch-item ${ch.status} ${ch.offlineDetected ? 'offline-detected' : ''}`;
+    const isOffline = !liveNow && !!ch.lastCheckedAt && !isLocal && !isLoad;
+    el.className = `ch-item ${ch.status} ${isOffline ? 'offline' : ''} ${ch.offlineDetected ? 'offline-detected' : ''}`;
     el.setAttribute('draggable', 'true');
     el.dataset.idx = idx;
     // Drag & drop handlers
@@ -2478,11 +2488,11 @@ function renderChannels() {
       save(); render();
     });
     const liveBadge = ql.live ? `<span class="ch-badge" style="background:rgba(233,25,22,.15);color:#ff6b6b;border:1px solid rgba(233,25,22,.3)">LIVE</span>` : '';
-    const badge = ch.offlineDetected ? '<span class="ch-badge err" style="color:var(--gold);border-color:rgba(240,165,0,.35);background:rgba(240,165,0,.08)">OFF</span>'
+    const badge = ch.offlineDetected ? '<span class="ch-badge off-alert">OFF</span>'
       : ch.status === 'playing' ? `<span class="ch-badge win">${escapeHtml(playerLabel(ch))}</span>`
       : ch.status === 'grid-on' ? '<span class="ch-badge grid">GRID</span>'
       : ch.status === 'error' ? `<button class="ch-badge err" onclick="showLog('${ch.name}')" title="${escapeHtml(lastErrors[ch.name] || 'Ver log')}" style="border:none;cursor:pointer">ERR</button>`
-      : liveBadge;
+      : liveBadge || (isOffline ? '<span class="ch-badge offline">OFFLINE</span>' : '');
     el.innerHTML = `
       <div class="ch-avatar ${liveNow ? 'live' : ''}" style="background:${channelGradient(ch.name)}">${avatarMarkup(ql.avatar, ql.display_name || ch.name)}</div>
       <div class="ch-info">
@@ -2990,7 +3000,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "accentColor": "#e0553a",
   "darkMode": false,
   "fontSize": 14,
-  "sidebarWidth": 300,
+  "sidebarWidth": 400,
   "density": "airy"
 }/*EDITMODE-END*/;
 
@@ -2998,6 +3008,7 @@ let tweaks = { ...TWEAK_DEFAULTS };
 
 function loadTweaks() {
   try { const s = storageGet('tweaks'); if (s) tweaks = { ...TWEAK_DEFAULTS, ...JSON.parse(s) }; } catch(e) {}
+  if ((tweaks.sidebarWidth || 0) < 380) tweaks.sidebarWidth = TWEAK_DEFAULTS.sidebarWidth;
 }
 
 function saveTweaks() {
