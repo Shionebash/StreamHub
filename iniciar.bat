@@ -15,6 +15,6 @@ if exist "%VENV_DIR%\Scripts\python.exe" (
     )
 )
 
-start "" "http://localhost:8080/twitch-multistream.html"
+start "" "http://localhost:8080/StreamHub.html"
 %PYTHON_EXE% server.py
 pause

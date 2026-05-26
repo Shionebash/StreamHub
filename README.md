@@ -79,7 +79,7 @@ bash iniciar.sh
 La app queda disponible en:
 
 ```text
-http://localhost:8080/twitch-multistream.html
+http://localhost:8080/StreamHub.html
 ```
 
 Tambien puedes iniciar manualmente:
@@ -176,7 +176,7 @@ Estos archivos y carpetas son generados localmente y no deben subirse a GitHub:
 
 ## Estructura Del Proyecto
 
-- `twitch-multistream.html`: interfaz principal.
+- `StreamHub.html`: interfaz principal.
 - `server.py`: servidor local, API, reproductores, grid y configuracion.
 - `launcher.py`: launcher local alternativo en puerto 8081.
 - `secure_token.py`: almacenamiento seguro/migracion de token.

@@ -26,10 +26,11 @@ ALLOWED_ORIGINS = {
     "http://127.0.0.1:8081",
 }
 STATIC_FILES = {
-    "/": "twitch-multistream.html",
-    "/index": "twitch-multistream.html",
-    "/index.html": "twitch-multistream.html",
-    "/twitch-multistream.html": "twitch-multistream.html",
+    "/": "StreamHub.html",
+    "/index": "StreamHub.html",
+    "/index.html": "StreamHub.html",
+    "/StreamHub.html": "StreamHub.html",
+    "/twitch-multistream.html": "StreamHub.html",
     "/logo.png": "logo.png",
 }
 

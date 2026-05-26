@@ -14,7 +14,7 @@ else
     PYTHON="python"
 fi
 
-URL="http://localhost:8080/twitch-multistream.html"
+URL="http://localhost:8080/StreamHub.html"
 if command -v xdg-open >/dev/null 2>&1; then
     xdg-open "$URL" >/dev/null 2>&1 &
 elif command -v firefox >/dev/null 2>&1; then

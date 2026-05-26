@@ -96,9 +96,10 @@ ALLOWED_ORIGINS = {
     "http://127.0.0.1:8081",
 }
 STATIC_FILES = {
-    "/": "twitch-multistream.html",
-    "/twitch-multistream.html": "twitch-multistream.html",
-    "/index.html": "twitch-multistream.html",
+    "/": "StreamHub.html",
+    "/StreamHub.html": "StreamHub.html",
+    "/twitch-multistream.html": "StreamHub.html",
+    "/index.html": "StreamHub.html",
     "/logo.png": "logo.png",
 }
 CHANNEL_RE = re.compile(r"^[a-z0-9_]{3,25}$")
@@ -2505,7 +2506,7 @@ def main():
   +==========================================+
   |      TWITCHGRID Server                   |
   +==========================================+
-  http://{HOST}:{PORT}/twitch-multistream.html
+  http://{HOST}:{PORT}/StreamHub.html
   Ctrl+C para detener
 """)
     _print_tool_status()
