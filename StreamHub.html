@@ -169,7 +169,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:va
 ══════════════════════════════════════════ */
 #channel-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding:0 10px 10px;}
 
-.ch-item{display:grid;grid-template-columns:36px minmax(68px,1fr) auto;align-items:center;gap:8px;background:transparent;
+.ch-item{display:grid;grid-template-columns:36px minmax(48px,1fr) auto;align-items:center;gap:8px;background:transparent;
   border:1.5px solid transparent;border-radius:var(--radius-sm);padding:7px 8px;transition:all .15s;min-height:52px;}
 .ch-item:hover{background:var(--surface2);border-color:var(--border);box-shadow:0 2px 8px rgba(0,0,0,.05);}
 .ch-item.playing{background:var(--accent-3);border-color:var(--accent);}
@@ -204,7 +204,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:va
 .ch-badge.offline{background:rgba(110,98,88,.1);color:var(--muted);border-color:rgba(110,98,88,.24);}
 .ch-badge.off-alert{background:rgba(224,85,58,.14);color:var(--red);border-color:rgba(224,85,58,.38);}
 
-.ch-actions{display:grid;grid-template-columns:repeat(8,26px);gap:4px;flex-shrink:0;opacity:.9;transition:opacity .15s;align-items:center;}
+.ch-actions{display:grid;grid-template-columns:repeat(9,26px);gap:3px;flex-shrink:0;opacity:.9;transition:opacity .15s;align-items:center;}
 .ch-item:hover .ch-actions,.ch-item.playing .ch-actions,.ch-item.grid-on .ch-actions,.ch-item.loading .ch-actions{opacity:1;}
 
 .ich{background:rgba(255,255,255,.62);border:1.5px solid rgba(70,54,38,.18);color:#5f574d;width:26px;height:26px;
@@ -563,6 +563,40 @@ input[type="checkbox"],input[type="color"]{accent-color:var(--accent)!important;
 .pv-game{font-size:12px;color:var(--muted);margin-bottom:7px;}
 .pv-title{font-size:13px;color:var(--text);line-height:1.5;margin-bottom:14px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
 .pv-actions{display:flex;gap:8px;}
+
+#vod-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1001;display:none;
+  align-items:center;justify-content:flex-end;padding:20px;backdrop-filter:blur(4px);}
+#vod-modal.show{display:flex;}
+#vod-box{width:min(820px,calc(100vw - 40px));height:min(760px,calc(100vh - 40px));max-width:100%;background:var(--surface);
+  border:1.5px solid var(--border2);border-radius:var(--radius);box-shadow:0 24px 64px rgba(0,0,0,.25);
+  display:flex;flex-direction:column;overflow:hidden;}
+.vod-head{display:flex;align-items:center;gap:12px;padding:14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.vod-avatar{width:42px;height:42px;border-radius:10px;background:var(--accent);color:var(--on-accent);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:800;overflow:hidden;flex-shrink:0;}
+.vod-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
+.vod-title-wrap{flex:1;min-width:0;}
+.vod-title{font-size:16px;font-weight:900;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vod-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;}
+.vod-tools{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.vod-tabs{display:flex;gap:5px;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.vod-tab{height:28px;padding:0 10px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;}
+.vod-tab.active{background:var(--accent-3);border-color:var(--accent-2);color:var(--accent);}
+#vod-list{flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;align-content:start;min-height:0;}
+.vod-row{display:flex;flex-direction:column;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.05);transition:all .15s;}
+.vod-row:hover{border-color:var(--border2);box-shadow:0 8px 22px rgba(0,0,0,.1);transform:translateY(-1px);}
+.vod-thumb{position:relative;width:100%;aspect-ratio:16/9;background:var(--surface3);overflow:hidden;align-self:stretch;}
+.vod-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.vod-thumb .no-img{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:30px;opacity:.1;}
+.vod-body{padding:10px;min-width:0;display:flex;flex-direction:column;gap:7px;min-height:132px;}
+.vod-name{font-size:13px;font-weight:800;color:var(--text);line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.vod-meta{font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.45;}
+.vod-actions{display:flex;gap:6px;margin-top:auto;}
+.vod-pager{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:6px;padding:4px 0 2px;flex-wrap:wrap;}
+.vod-page-btn{min-width:30px;height:28px;padding:0 9px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);font-family:var(--mono);font-size:10px;font-weight:800;cursor:pointer;}
+.vod-page-btn:hover{background:var(--surface3);color:var(--text);}
+.vod-page-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+body.text-only .vod-thumb{display:none!important;}
+body.text-only #vod-list{display:flex;flex-direction:column;}
+body.text-only .vod-body{min-height:auto;}
 
 /* ══════════════════════════════════════════
    TOAST
@@ -1029,6 +1063,28 @@ body.text-only .cat-card img,body.text-only .cat-card .no-img{display:none!impor
   </div>
 </div>
 
+<div id="vod-modal" onclick="closeVods(event)">
+  <div id="vod-box">
+    <div class="vod-head">
+      <div class="vod-avatar" id="vod-avatar">VOD</div>
+      <div class="vod-title-wrap">
+        <div class="vod-title" id="vod-channel-name">VODs</div>
+        <div class="vod-sub" id="vod-channel-sub">Ultimos directos guardados</div>
+      </div>
+      <div class="vod-tools">
+        <button class="btn btn-sm" onclick="refreshVods()">↻</button>
+        <button class="btn btn-sm btn-r" onclick="closeVods()">Cerrar</button>
+      </div>
+    </div>
+    <div class="vod-tabs">
+      <button class="vod-tab active" id="vod-tab-archive" onclick="switchVodType('archive')">DIRECTOS</button>
+      <button class="vod-tab" id="vod-tab-highlight" onclick="switchVodType('highlight')">HIGHLIGHTS</button>
+      <button class="vod-tab" id="vod-tab-upload" onclick="switchVodType('upload')">UPLOADS</button>
+    </div>
+    <div id="vod-list"></div>
+  </div>
+</div>
+
 <div id="toast"><span id="toast-msg"></span><div id="toast-bar"></div></div>
 <div class="log-panel" id="log-panel">
   <div class="log-head">
@@ -1192,6 +1248,7 @@ let dropsTarget = storageGet('dropsTarget') || '';
 let dashboardView = storageGet('dashboardView') === 'grid' ? 'grid' : 'list';
 let lastGridState = null;
 let miningState = { available:false, running:false, connected:false, points:{}, drops:[], log:[], websocket_ok:false, gql_ok:false };
+let vodState = { channel:'', displayName:'', avatar:'', type:'archive', videos:[], cursor:'', loading:false, page:1, pageSize:6 };
 
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -1199,6 +1256,48 @@ function escapeHtml(value) {
 function safeChannel(value) {
   const n = String(value || '').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace('twitch.tv/','').replace(/^@/,'').split(/[/?#]/)[0];
   return /^[a-z0-9_]{3,25}$/.test(n) ? n : '';
+}
+function safeVodId(value) {
+  const text = String(value || '').trim();
+  const m = text.match(/(?:twitch\.tv\/videos\/|\/videos\/|^v?)(\d{5,20})(?:[/?#].*)?$/i);
+  const id = m ? m[1] : text;
+  return /^\d{5,20}$/.test(id) ? id : '';
+}
+function parseTwitchEntry(value) {
+  const vodId = safeVodId(value);
+  if (vodId) {
+    return { name:'v' + vodId, type:'vod', vodId, displayName:'VOD ' + vodId };
+  }
+  const name = safeChannel(value);
+  return name ? { name, type:'channel', displayName:name } : null;
+}
+function isVod(ch) {
+  return !!(ch && ch.type === 'vod' && ch.vodId);
+}
+function mediaLabel(ch) {
+  return isVod(ch) ? (ch.displayName || ('VOD ' + ch.vodId)) : ch.name;
+}
+function mediaPlayPayload(ch) {
+  return isVod(ch) ? { canal:ch.name, vod_id:ch.vodId } : { canal:ch.name };
+}
+function makeQueueItem(entry, overrides={}) {
+  return {
+    name: entry.name,
+    type: entry.type || 'channel',
+    vodId: entry.vodId || '',
+    displayName: entry.displayName || entry.name,
+    status:'idle',
+    audioOnly:false,
+    gridEnabled:true,
+    webOpen:false,
+    dropsTarget:false,
+    watchMining:false,
+    lastLive:null,
+    lastSeenLiveAt:null,
+    offlineDetected:false,
+    lastProcessState:null,
+    ...overrides
+  };
 }
 function hasTwitchCreds() {
   return !!(serverCreds.hasToken && (serverCreds.hasClientId || settings.clientId));
@@ -1302,13 +1401,13 @@ function setAccentColor(value, persist=false) {
 function handleGlobalSearchKey(event) {
   if (event.key !== 'Enter') return;
   const input = event.currentTarget;
-  const channel = safeChannel(input.value);
-  if (!channel) {
-    toast('Canal invalido');
+  const entry = parseTwitchEntry(input.value);
+  if (!entry) {
+    toast('Canal o VOD invalido');
     return;
   }
-  if (!channels.some(c => c.name === channel)) {
-    channels.push({ name: channel, status:'idle', audioOnly:false, gridEnabled:true, webOpen:false, dropsTarget:false, watchMining:false, lastLive:null, lastSeenLiveAt:null, offlineDetected:false, lastProcessState:null });
+  if (!channels.some(c => c.name === entry.name)) {
+    channels.push(makeQueueItem(entry));
   }
   input.value = '';
   switchTab('queue');
@@ -1339,7 +1438,7 @@ function toggleTextOnly() {
 }
 
 function save() {
-  storageSet('channels', JSON.stringify(channels.map(c => ({ name:c.name, audioOnly:c.audioOnly||false, gridEnabled:c.gridEnabled !== false }))));
+  storageSet('channels', JSON.stringify(channels.map(c => ({ name:c.name, type:c.type || 'channel', vodId:c.vodId || '', displayName:c.displayName || c.name, audioOnly:c.audioOnly||false, gridEnabled:c.gridEnabled !== false }))));
   storageSet('favorites', JSON.stringify(favorites));
   storageSet('dropsTarget', dropsTarget || '');
   const safeSettings = { ...settings, token:'', refresh_token:'' };
@@ -1359,8 +1458,8 @@ function load() {
   try {
     const ch = storageGet('channels');
     if (ch) JSON.parse(ch).forEach(o => {
-      const name = safeChannel(typeof o==='string'?o:o.name);
-      if (name) channels.push({ name, status:'idle', audioOnly: o.audioOnly||false, gridEnabled: o.gridEnabled !== false, webOpen:false, dropsTarget:false, watchMining:false, lastLive:null, lastSeenLiveAt:null, offlineDetected:false, lastProcessState:null });
+      const entry = parseTwitchEntry(typeof o==='string'?o:(o.vodId ? ('v' + o.vodId) : o.name));
+      if (entry) channels.push(makeQueueItem({ ...entry, displayName:o.displayName || entry.displayName }, { audioOnly: o.audioOnly||false, gridEnabled: o.gridEnabled !== false }));
     });
     const fv = storageGet('favorites');
     if (fv) favorites = JSON.parse(fv).map(safeChannel).filter(Boolean);
@@ -1592,10 +1691,10 @@ function setDot(state, text) {
 // ── CHANNELS (COLA) ──
 function addChannel(name) {
   const inp = document.getElementById('ch-input');
-  const n   = safeChannel(name || inp.value);
-  if (!n) { toast('Canal inválido: usa letras, números y _'); return; }
-  if (channels.find(c => c.name === n)) { toast('Ya está en la cola'); inp.value=''; return; }
-  channels.push({ name:n, status:'idle', audioOnly:false, gridEnabled:true, webOpen:false, dropsTarget:false, lastLive:null, lastSeenLiveAt:null, offlineDetected:false, lastProcessState:null });
+  const entry = parseTwitchEntry(name || inp.value);
+  if (!entry) { toast('Canal o VOD invalido'); return; }
+  if (channels.find(c => c.name === entry.name)) { toast('Ya esta en la cola'); inp.value=''; return; }
+  channels.push(makeQueueItem(entry));
   if (!name) inp.value = '';
   save(); render();
   checkQueueLive();
@@ -1666,9 +1765,15 @@ function toggleFavFromChannel(name) {
   save(); render();
 }
 function openTwitchWeb(name) {
+  const ch = channels.find(c => c.name === name);
+  if (isVod(ch)) {
+    ch.webOpen = true;
+    window.open(`https://www.twitch.tv/videos/${encodeURIComponent(ch.vodId)}`, '_blank', 'noopener');
+    render();
+    return;
+  }
   const n = safeChannel(name);
   if (!n) return;
-  const ch = channels.find(c => c.name === n);
   if (ch) ch.webOpen = true;
   window.open(`https://www.twitch.tv/${encodeURIComponent(n)}`, '_blank', 'noopener');
   render();
@@ -1882,7 +1987,7 @@ async function playChannel(name) {
   try {
     const r = await apiFetch('/api/play', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ canal:name, calidad:settings.quality, player:settings.player, mpv:settings.mpv, vlc:settings.vlc, streamlink:settings.sl, audio_only:ch.audioOnly||false })
+      body: JSON.stringify({ ...mediaPlayPayload(ch), calidad:settings.quality, player:settings.player, mpv:settings.mpv, vlc:settings.vlc, streamlink:settings.sl, audio_only:ch.audioOnly||false })
     });
     const d = await r.json();
     ch.status = d.ok ? 'playing' : 'error';
@@ -1892,7 +1997,7 @@ async function playChannel(name) {
       ch.startedAt = d.state.startedAt || Date.now()/1000;
     }
     ch.offlineDetected = false;
-    if (d.ok) { toast('▶ ' + name + ' abierto'); connectIRC(name); }
+    if (d.ok) { toast('Play ' + mediaLabel(ch) + ' abierto'); if (!isVod(ch)) connectIRC(name); }
     else { lastErrors[name] = d.error || 'desconocido'; toast('Error: ' + lastErrors[name]); }
   } catch(e) { ch.status='error'; lastErrors[name] = 'Error de conexión'; toast('Error de conexión'); }
   render();
@@ -1933,8 +2038,10 @@ async function launchGrid() {
     const r = await apiFetch('/api/grid', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        canales:       videoTargets.map(c => c.name),
-        canales_audio: audioTargets.map(c => c.name),
+        canales:       videoTargets.filter(c => !isVod(c)).map(c => c.name),
+        canales_audio: audioTargets.filter(c => !isVod(c)).map(c => c.name),
+        vods:          videoTargets.filter(isVod).map(c => c.vodId),
+        vods_audio:    audioTargets.filter(isVod).map(c => c.vodId),
         calidad: settings.quality,
         player: settings.player, mpv: settings.mpv, vlc: settings.vlc,
         gp: settings.gp, streamlink: settings.sl, ffmpeg: settings.ff,
@@ -1962,7 +2069,7 @@ async function launchGrid() {
           lastErrors[ch.name] = failMap[ch.name] || 'No entro al grid';
         }
       });
-      v.forEach(name => connectIRC(name));
+      v.forEach(name => { const ch = channels.find(c => c.name === name); if (!isVod(ch)) connectIRC(name); });
       toast('⊞ ' + d.msg);
       setDot('ok', 'Servidor conectado');
     } else { lastErrors.grid = d.msg||d.error||'desconocido'; toast('Error: ' + lastErrors.grid); setDot('ok','Servidor conectado'); }
@@ -1998,7 +2105,9 @@ function removeFav(name) {
 }
 function addToQueue(name) {
   if (!channels.find(c => c.name === name)) {
-    channels.push({ name, status:'idle', audioOnly:false, gridEnabled:true, webOpen:false, dropsTarget:false, lastLive:null, lastSeenLiveAt:null, offlineDetected:false, lastProcessState:null });
+    const entry = parseTwitchEntry(name);
+    if (!entry) { toast('Canal invalido'); return; }
+    channels.push(makeQueueItem(entry));
     save(); render();
     toast(name + ' añadido a la cola');
   } else {
@@ -2070,12 +2179,13 @@ function renderFavs() {
     row.className = 'fav-row' + (live ? ' is-live' : '');
     row.innerHTML = `
       <div class="fav-dot"></div>
-      <div class="fav-row-info">
+      <div class="fav-row-info" onclick="openVods('${name}','${escapeHtml(d.display_name || name)}')" style="cursor:pointer">
         <div class="fav-row-name">${escapeHtml(d.display_name || name)}</div>
         <div class="fav-row-sub">${escapeHtml(live ? (d.game || '') + ' · ' + formatViewers(d.viewers) + ' viewers' : 'Offline')}</div>
       </div>
       <div class="fav-row-actions">
         ${live ? `<button class="ich" onclick="showPreview('${name}',favsData['${name}']||{})" title="Preview">👁</button>` : ''}
+        <button class="ich" onclick="openVods('${name}','${escapeHtml(d.display_name || name)}')" title="Ver VODs" aria-label="Ver VODs">${actionIcon('video')}</button>
         <button class="ich ${inQ?'fav':''}" onclick="addToQueue('${name}')" title="Añadir a cola" ${inQ?'disabled':''}>+</button>
         <button class="ich del" onclick="removeFav('${name}')" title="Quitar">✕</button>
       </div>`;
@@ -2264,13 +2374,14 @@ function renderStreamList(listId, streams, fromFollowed) {
     const preview = encodeURIComponent(JSON.stringify({ ...s, login })).replace(/'/g, '%27');
     item.innerHTML = `
       <div class="stream-thumb-sm" onclick="showPreview('${login}',JSON.parse(decodeURIComponent('${preview}')))">${thumb}</div>
-      <div class="stream-info">
+      <div class="stream-info" onclick="openVods('${login}','${escapeHtml(s.display_name || s.user_name || login)}')" style="cursor:pointer">
         <div class="stream-name">${escapeHtml(s.display_name || s.user_name || login)}</div>
         <div class="stream-game">${escapeHtml(s.game || s.game_name || '')}</div>
         <div class="stream-vc">${formatViewers(s.viewers || s.viewer_count)} viewers</div>
       </div>
       <div class="stream-actions">
         <button class="ich" onclick="showPreview('${login}',JSON.parse(decodeURIComponent('${preview}')))" title="Preview">👁</button>
+        <button class="ich" onclick="openVods('${login}','${escapeHtml(s.display_name || s.user_name || login)}')" title="Ver VODs" aria-label="Ver VODs">${actionIcon('video')}</button>
         <button class="ich ${inQ?'fav':''}" onclick="addToQueue('${login}')" title="Añadir a cola" ${inQ?'disabled':''}>+</button>
       </div>`;
     list.appendChild(item);
@@ -2278,6 +2389,148 @@ function renderStreamList(listId, streams, fromFollowed) {
 }
 
 // ── PREVIEW MODAL ──
+function formatVodDate(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('es', { day:'2-digit', month:'short', year:'numeric' });
+}
+function vodTypeLabel(type) {
+  return type === 'highlight' ? 'highlights' : type === 'upload' ? 'uploads' : 'directos';
+}
+async function openVods(name, displayName='') {
+  const channel = safeChannel(name);
+  if (!channel) return;
+  vodState = { channel, displayName: displayName || channel, avatar:'', type:'archive', videos:[], cursor:'', loading:true, page:1, pageSize:6 };
+  document.getElementById('vod-modal').classList.add('show');
+  renderVods();
+  await loadVods(false);
+}
+function closeVods(e) {
+  if (!e || e.target === document.getElementById('vod-modal')) {
+    document.getElementById('vod-modal').classList.remove('show');
+  }
+}
+async function switchVodType(type) {
+  vodState.type = ['archive','highlight','upload'].includes(type) ? type : 'archive';
+  vodState.videos = [];
+  vodState.cursor = '';
+  vodState.page = 1;
+  vodState.loading = true;
+  renderVods();
+  await loadVods(false);
+}
+async function refreshVods() {
+  if (!vodState.channel) return;
+  vodState.videos = [];
+  vodState.cursor = '';
+  vodState.page = 1;
+  vodState.loading = true;
+  renderVods();
+  await loadVods(false);
+}
+async function loadVods(append=false) {
+  if (!hasTwitchCreds()) {
+    vodState.loading = false;
+    vodState.error = 'Configura token y Client ID para ver VODs';
+    renderVods();
+    return;
+  }
+  try {
+    const params = new URLSearchParams({ canal: vodState.channel, type: vodState.type });
+    if (append && vodState.cursor) params.set('cursor', vodState.cursor);
+    const r = await apiFetch(`/api/videos?${params}`, { signal: AbortSignal.timeout(10000) });
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    vodState.displayName = d.display_name || vodState.displayName || vodState.channel;
+    vodState.avatar = d.avatar || vodState.avatar || '';
+    vodState.cursor = d.cursor || '';
+    vodState.videos = append ? vodState.videos.concat(d.videos || []) : (d.videos || []);
+    if (!append) vodState.page = 1;
+    vodState.error = '';
+  } catch(e) {
+    vodState.error = 'Error al cargar VODs';
+  }
+  vodState.loading = false;
+  renderVods();
+}
+function renderVods() {
+  const modal = document.getElementById('vod-modal');
+  if (!modal?.classList.contains('show')) return;
+  const avatar = document.getElementById('vod-avatar');
+  const title = document.getElementById('vod-channel-name');
+  const sub = document.getElementById('vod-channel-sub');
+  const list = document.getElementById('vod-list');
+  title.textContent = vodState.displayName || vodState.channel || 'VODs';
+  const validVideos = vodState.videos.filter(v => safeVodId(v.id));
+  const pageSize = vodState.pageSize || 6;
+  const pageCount = Math.max(1, Math.ceil(validVideos.length / pageSize));
+  vodState.page = Math.max(1, Math.min(vodState.page || 1, pageCount));
+  sub.textContent = `${vodTypeLabel(vodState.type)} · ${validVideos.length || 0} encontrados`;
+  avatar.innerHTML = vodState.avatar ? `<img src="${escapeHtml(vodState.avatar)}" alt="${escapeHtml(vodState.displayName)}">` : escapeHtml(initials(vodState.displayName || vodState.channel || 'VOD'));
+  ['archive','highlight','upload'].forEach(t => document.getElementById('vod-tab-' + t)?.classList.toggle('active', vodState.type === t));
+  if (vodState.loading) {
+    list.innerHTML = '<div class="empty-ch"><div class="spin"></div><br>Cargando VODs...</div>';
+    return;
+  }
+  if (vodState.error) {
+    list.innerHTML = `<div class="empty-ch">${escapeHtml(vodState.error)}</div>`;
+    return;
+  }
+  if (!vodState.videos.length) {
+    list.innerHTML = `<div class="empty-ch">No hay ${escapeHtml(vodTypeLabel(vodState.type))} disponibles</div>`;
+    return;
+  }
+  const pageVideos = validVideos.slice((vodState.page - 1) * pageSize, vodState.page * pageSize);
+  list.innerHTML = pageVideos.map(v => {
+    const id = safeVodId(v.id);
+    const key = 'v' + id;
+    const inQ = channels.some(c => c.name === key);
+    const thumb = v.thumbnail ? imageMarkup(v.thumbnail, 'VOD') : '<div class="no-img">VOD</div>';
+    const meta = [v.duration, formatVodDate(v.created_at || v.published_at), `${formatViewers(v.views || 0)} views`].filter(Boolean).join(' · ');
+    return `<div class="vod-row">
+      <div class="vod-thumb">${thumb}</div>
+      <div class="vod-body">
+        <div class="vod-name" title="${escapeHtml(v.title || '')}">${escapeHtml(v.title || ('VOD ' + id))}</div>
+        <div class="vod-meta">${escapeHtml(meta)}</div>
+        <div class="vod-actions">
+          <button class="btn btn-p btn-sm" onclick="addVodToQueue('${id}','${encodeURIComponent(v.title || '')}')" ${inQ?'disabled':''}>${inQ?'En cola':'Añadir'}</button>
+          <button class="btn btn-sm" onclick="playVodFromPanel('${id}','${encodeURIComponent(v.title || '')}')">Abrir</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') + renderVodPager(pageCount);
+}
+function setVodPage(page) {
+  vodState.page = Number(page) || 1;
+  renderVods();
+}
+function renderVodPager(pageCount) {
+  const pages = Array.from({ length: pageCount }, (_, i) => i + 1)
+    .map(p => `<button class="vod-page-btn ${p === vodState.page ? 'active' : ''}" onclick="setVodPage(${p})">${p}</button>`)
+    .join('');
+  const more = vodState.cursor ? `<button class="vod-page-btn" onclick="loadVods(true)">Mas</button>` : '';
+  return `<div class="vod-pager">${pages}${more}</div>`;
+}
+function addVodToQueue(id, encodedTitle='') {
+  const vodId = safeVodId(id);
+  if (!vodId) return;
+  const title = decodeURIComponent(encodedTitle || '');
+  const entry = { name:'v' + vodId, type:'vod', vodId, displayName:title ? title.slice(0, 80) : ('VOD ' + vodId) };
+  if (!channels.some(c => c.name === entry.name)) {
+    channels.push(makeQueueItem(entry));
+    save(); render(); renderVods();
+    toast('VOD anadido a la cola');
+  } else {
+    toast('VOD ya esta en la cola');
+  }
+}
+async function playVodFromPanel(id, encodedTitle='') {
+  addVodToQueue(id, encodedTitle);
+  await delay(100);
+  await playChannel('v' + safeVodId(id));
+}
+
 function showPreview(name, data) {
   if (settings.textOnly) return;
   previewChannel = name;
@@ -2396,6 +2649,7 @@ function playerLabel(ch) {
   return (ch.player || ch.lastProcessState?.player || settings.player || 'player').toUpperCase();
 }
 function lastUpdatedLabel(ch) {
+  if (isVod(ch)) return 'VOD de Twitch';
   const ts = ch.lastCheckedAt || ch.lastSeenLiveAt;
   if (!ts) return hasTwitchCreds() ? 'Sin consultar' : 'Sin credenciales Twitch';
   const mins = Math.floor(Math.max(0, Date.now() - ts) / 60000);
@@ -2415,6 +2669,7 @@ function channelGradient(name) {
   return `linear-gradient(135deg,hsl(${h} 72% 38%),hsl(${(h + 38) % 360} 68% 22%))`;
 }
 function channelSubtitle(ch) {
+  if (isVod(ch)) return ch.audioOnly ? 'VOD · solo audio' : 'VOD de Twitch';
   const ql = liveInfo(ch.name);
   if (ql.live) return ql.game || ql.title || 'Live ahora';
   if (ch.offlineDetected) return 'Offline detectado';
@@ -2422,6 +2677,15 @@ function channelSubtitle(ch) {
   return ql.game || '—';
 }
 function statePills(ch) {
+  if (isVod(ch)) {
+    const pills = [['VOD','grid']];
+    if (ch.status === 'playing') pills.push(['Reproduciendo','ok']);
+    if (ch.status === 'grid-on') pills.push(['Grid','grid']);
+    if (ch.gridEnabled === false) pills.push(['Fuera del grid','warn']);
+    if (ch.audioOnly) pills.push(['Solo audio','grid']);
+    if (ch.status === 'error') pills.push(['Error','err']);
+    return pills.map(([t,c]) => `<span class="state-pill2 ${c}">${escapeHtml(t)}</span>`).join('');
+  }
   const ql = liveInfo(ch.name);
   const live = !!ql.live || ch.lastLive === true;
   const pills = [];
@@ -2451,7 +2715,8 @@ function actionIcon(name) {
     eyeBolt: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><path d="m12.5 9-2 3h3l-2 3"/><path d="M12 9.5a2.6 2.6 0 0 0-2.2 4"/></svg>',
     play: '<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="8,5 19,12 8,19"/></svg>',
     stop: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>',
-    trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>'
+    trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
+    video: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3V9z"/></svg>'
   };
   return icons[name] || '';
 }
@@ -2465,6 +2730,7 @@ function renderChannels() {
   channels.forEach((ch, idx) => {
     const el = document.createElement('div');
     const ql = liveInfo(ch.name);
+    const label = mediaLabel(ch);
     const isLocal = ch.status === 'playing' || ch.status === 'grid-on';
     const isLoad = ch.status === 'loading';
     const isFav = favorites.includes(ch.name);
@@ -2498,9 +2764,9 @@ function renderChannels() {
       : ch.status === 'error' ? `<button class="ch-badge err" onclick="showLog('${ch.name}')" title="${escapeHtml(lastErrors[ch.name] || 'Ver log')}" style="border:none;cursor:pointer">ERR</button>`
       : liveBadge || (isOffline ? '<span class="ch-badge offline">OFFLINE</span>' : '');
     el.innerHTML = `
-      <div class="ch-avatar ${liveNow ? 'live' : ''}" style="background:${channelGradient(ch.name)}">${avatarMarkup(ql.avatar, ql.display_name || ch.name)}</div>
+      <div class="ch-avatar ${liveNow ? 'live' : ''}" ${!isVod(ch) ? `onclick="openVods('${ch.name}','${escapeHtml(ql.display_name || ch.name)}')" title="Ver VODs" style="background:${channelGradient(ch.name)};cursor:pointer"` : `style="background:${channelGradient(ch.name)}"`}>${isVod(ch) ? 'VOD' : avatarMarkup(ql.avatar, ql.display_name || ch.name)}</div>
       <div class="ch-info">
-        <div class="ch-line"><span class="ch-name">${escapeHtml(ch.name)}</span>${badge}</div>
+        <div class="ch-line"><span class="ch-name" ${!isVod(ch) ? `onclick="openVods('${ch.name}','${escapeHtml(ql.display_name || ch.name)}')" style="cursor:pointer"` : ''}>${escapeHtml(label)}</span>${badge}</div>
         <div class="ch-sub">${escapeHtml(channelSubtitle(ch))}</div>
       </div>
       <div class="ch-actions">
@@ -2508,6 +2774,7 @@ function renderChannels() {
         <button class="ich ${ch.gridEnabled === false ? '' : 'grid-on'}" onclick="toggleGridInclude('${ch.name}')" title="${ch.gridEnabled === false ? 'Incluir en grid' : 'Quitar del grid'}" aria-label="${ch.gridEnabled === false ? 'Incluir en grid' : 'Quitar del grid'}">${actionIcon('grid')}</button>
         <button class="ich ${ch.audioOnly ? 'audio-on' : ''}" onclick="toggleAudioOnly('${ch.name}')" title="${ch.audioOnly ? 'Solo audio activo' : 'Audio y video'}" aria-label="${ch.audioOnly ? 'Solo audio activo' : 'Audio y video'}">${actionIcon(ch.audioOnly ? 'headphones' : 'volume')}</button>
         <button class="ich ${ch.webOpen ? 'web-on' : ''}" onclick="openTwitchWeb('${ch.name}')" title="Abrir Twitch web" aria-label="Abrir Twitch web">${actionIcon('external')}</button>
+        ${!isVod(ch) ? `<button class="ich" onclick="openVods('${ch.name}','${escapeHtml(ql.display_name || ch.name)}')" title="Ver VODs" aria-label="Ver VODs">${actionIcon('video')}</button>` : ''}
         <button class="ich ${dropsTarget === ch.name ? 'drop-on' : ''}" onclick="setDropsTarget('${ch.name}')" title="Marcar para drops web" aria-label="Marcar para drops web">${actionIcon('gift')}</button>
         <button class="ich ${ch.watchMining ? 'watch-on' : ''}" onclick="toggleWatchMining('${ch.name}')" title="${ch.watchMining ? 'Watch mining activo' : 'Activar watch mining'}" aria-label="${ch.watchMining ? 'Watch mining activo' : 'Activar watch mining'}">${actionIcon('eyeBolt')}</button>
         ${isLocal
@@ -2526,7 +2793,7 @@ function renderContent() {
   const counts={total:channels.length,live:channels.filter(c=>liveInfo(c.name).live||c.lastLive).length,offline:channels.filter(c=>!(liveInfo(c.name).live||c.lastLive)).length,playing:channels.filter(c=>c.status==='playing'||c.status==='grid-on'||c.status==='loading').length,errors:channels.filter(c=>c.status==='error'||c.offlineDetected).length};
   const dropsName=dropsTarget&&channels.some(c=>c.name===dropsTarget)?dropsTarget:'';
   const liveMeta=`${counts.playing} playing · ${counts.offline} idle`;
-  active.innerHTML=`<div class="dash-head"><div><div class="dash-title">Streams <span style="font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500">· ${new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}</span></div><div class="dash-sub">Drops/viewer cuentan desde Twitch web; VLC/mpv/GridPlayer son para bajo consumo.</div></div><div class="act-btns"><button class="btn btn-p btn-sm" onclick="playAll()">▶ Ventanas</button><button class="btn btn-b btn-sm" onclick="launchGrid()">⊞ Grid</button><button class="btn btn-r btn-sm" onclick="stopAll()">■ Parar todo</button></div></div><div class="dash-stats"><div class="dash-stat"><div class="num">${counts.total}</div><div class="lbl">total</div></div><div class="dash-stat"><div class="num">${counts.live}</div><div class="lbl">live</div></div><div class="dash-stat"><div class="num">${counts.playing}</div><div class="lbl">playing</div></div><div class="dash-stat"><div class="num">${counts.errors}</div><div class="lbl">alertas</div></div></div>${renderMiningBox(dropsName)}<div class="dash-section-h"><h2>Canales</h2><div class="dash-section-tools"><span class="meta">${liveMeta}</span><div class="view-toggle"><button class="view-btn ${dashboardView==='grid'?'active':''}" onclick="setDashboardView('grid')" title="Vista grid">&#8862;</button><button class="view-btn ${dashboardView==='list'?'active':''}" onclick="setDashboardView('list')" title="Vista lista">&#9776;</button></div></div></div><div class="dash-grid view-${dashboardView}">${channels.map(ch=>{const ql=liveInfo(ch.name);const live=!!ql.live||ch.lastLive===true;const viewers=ql.viewers?formatViewers(ql.viewers)+' viewers':'sin viewers';const meta=live?`${viewers} · ${escapeHtml(ql.game||'Sin categoría')}`:(ch.offlineDetected?'Offline detectado':'Offline o sin datos');const title=ql.title?escapeHtml(ql.title):(lastErrors[ch.name]?escapeHtml(lastErrors[ch.name]):'&nbsp;');return`<div class="dash-card ${ch.status} ${ch.offlineDetected?'offline-detected':''}"><div class="dc-thumb" style="background:${channelGradient(ch.name)}">${streamPreviewMarkup(ql,ch.name)}<div class="dc-tagrow"><span class="dc-tag ${live?'live':''}">${live?'LIVE':'offline'}</span><span class="dc-tag">${viewers}</span></div></div><div class="dc-body"><div class="dc-top"><div class="dc-avatar" style="background:${channelGradient(ch.name)}">${avatarMarkup(ql.avatar,ql.display_name||ch.name)}</div><div class="dc-name">${escapeHtml(ql.display_name||ch.name)}</div></div><div class="dc-title" title="${title}">${title}</div><div class="dc-meta"><div>${meta}</div><div>${escapeHtml(lastUpdatedLabel(ch))}${ch.lastProcessState?.startedAt?` · ${escapeHtml(playerLabel(ch))}`:''}</div></div><div class="dc-badges">${statePills(ch)}</div><div class="dc-actions"><button class="btn btn-sm ${ch.gridEnabled===false?'':'btn-b'}" onclick="toggleGridInclude('${ch.name}')">${ch.gridEnabled===false?'Incluir grid':'En grid'}</button>${ch.status==='playing'||ch.status==='grid-on'||ch.status==='loading'?`<button class="btn btn-r btn-sm" onclick="stopChannel('${ch.name}')">■ Stop</button>`:`<button class="btn btn-p btn-sm" onclick="playChannel('${ch.name}')">▶ Local</button>`}<button class="btn btn-b btn-sm" onclick="openTwitchWeb('${ch.name}')">Twitch</button><button class="btn btn-sm" onclick="openTwitchChatPage('${ch.name}')">Chat</button><button class="btn btn-sm" onclick="setDropsTarget('${ch.name}')">Drops</button>${ch.offlineDetected||ch.status==='error'?`<button class="btn btn-sm" onclick="retryChannel('${ch.name}')">Reintentar</button><button class="btn btn-sm" onclick="showLog('${ch.name}')">Log</button>`:''}</div></div><div class="dc-side"><button class="ich ${favorites.includes(ch.name)?'fav':''}" onclick="toggleFavFromChannel('${ch.name}')" title="Favorito" aria-label="Favorito">${actionIcon('star')}</button><button class="ich del" onclick="removeChannel('${ch.name}')" title="Eliminar" aria-label="Eliminar">${actionIcon('trash')}</button></div></div>`;}).join('')}</div>`;
+active.innerHTML=`<div class="dash-head"><div><div class="dash-title">Streams <span style="font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500">· ${new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}</span></div><div class="dash-sub">Drops/viewer cuentan desde Twitch web; VLC/mpv/GridPlayer son para bajo consumo.</div></div><div class="act-btns"><button class="btn btn-p btn-sm" onclick="playAll()">▶ Ventanas</button><button class="btn btn-b btn-sm" onclick="launchGrid()">⊞ Grid</button><button class="btn btn-r btn-sm" onclick="stopAll()">■ Parar todo</button></div></div><div class="dash-stats"><div class="dash-stat"><div class="num">${counts.total}</div><div class="lbl">total</div></div><div class="dash-stat"><div class="num">${counts.live}</div><div class="lbl">live</div></div><div class="dash-stat"><div class="num">${counts.playing}</div><div class="lbl">playing</div></div><div class="dash-stat"><div class="num">${counts.errors}</div><div class="lbl">alertas</div></div></div>${renderMiningBox(dropsName)}<div class="dash-section-h"><h2>Canales</h2><div class="dash-section-tools"><span class="meta">${liveMeta}</span><div class="view-toggle"><button class="view-btn ${dashboardView==='grid'?'active':''}" onclick="setDashboardView('grid')" title="Vista grid">&#8862;</button><button class="view-btn ${dashboardView==='list'?'active':''}" onclick="setDashboardView('list')" title="Vista lista">&#9776;</button></div></div></div><div class="dash-grid view-${dashboardView}">${channels.map(ch=>{const ql=liveInfo(ch.name);const live=!!ql.live||ch.lastLive===true;const viewers=ql.viewers?formatViewers(ql.viewers)+' viewers':'sin viewers';const meta=live?`${viewers} · ${escapeHtml(ql.game||'Sin categoría')}`:(ch.offlineDetected?'Offline detectado':'Offline o sin datos');const title=ql.title?escapeHtml(ql.title):(lastErrors[ch.name]?escapeHtml(lastErrors[ch.name]):'&nbsp;');const vodClick=!isVod(ch)?`onclick="openVods('${ch.name}','${escapeHtml(ql.display_name||ch.name)}')" title="Ver VODs"`:'';return`<div class="dash-card ${ch.status} ${ch.offlineDetected?'offline-detected':''}"><div class="dc-thumb" style="background:${channelGradient(ch.name)}">${streamPreviewMarkup(ql,ch.name)}<div class="dc-tagrow"><span class="dc-tag ${live?'live':''}">${live?'LIVE':'offline'}</span><span class="dc-tag">${viewers}</span></div></div><div class="dc-body"><div class="dc-top"><div class="dc-avatar" ${vodClick} style="background:${channelGradient(ch.name)};${!isVod(ch)?'cursor:pointer':''}">${avatarMarkup(ql.avatar,ql.display_name||ch.name)}</div><div class="dc-name" ${vodClick} style="${!isVod(ch)?'cursor:pointer':''}">${escapeHtml(ql.display_name||ch.name)}</div></div><div class="dc-title" title="${title}">${title}</div><div class="dc-meta"><div>${meta}</div><div>${escapeHtml(lastUpdatedLabel(ch))}${ch.lastProcessState?.startedAt?` · ${escapeHtml(playerLabel(ch))}`:''}</div></div><div class="dc-badges">${statePills(ch)}</div><div class="dc-actions"><button class="btn btn-sm ${ch.gridEnabled===false?'':'btn-b'}" onclick="toggleGridInclude('${ch.name}')">${ch.gridEnabled===false?'Incluir grid':'En grid'}</button>${ch.status==='playing'||ch.status==='grid-on'||ch.status==='loading'?`<button class="btn btn-r btn-sm" onclick="stopChannel('${ch.name}')">■ Stop</button>`:`<button class="btn btn-p btn-sm" onclick="playChannel('${ch.name}')">▶ Local</button>`}<button class="btn btn-b btn-sm" onclick="openTwitchWeb('${ch.name}')">Twitch</button>${!isVod(ch)?`<button class="btn btn-sm" onclick="openVods('${ch.name}','${escapeHtml(ql.display_name||ch.name)}')">VODs</button>`:''}<button class="btn btn-sm" onclick="openTwitchChatPage('${ch.name}')">Chat</button><button class="btn btn-sm" onclick="setDropsTarget('${ch.name}')">Drops</button>${ch.offlineDetected||ch.status==='error'?`<button class="btn btn-sm" onclick="retryChannel('${ch.name}')">Reintentar</button><button class="btn btn-sm" onclick="showLog('${ch.name}')">Log</button>`:''}</div></div><div class="dc-side"><button class="ich ${favorites.includes(ch.name)?'fav':''}" onclick="toggleFavFromChannel('${ch.name}')" title="Favorito" aria-label="Favorito">${actionIcon('star')}</button><button class="ich del" onclick="removeChannel('${ch.name}')" title="Eliminar" aria-label="Eliminar">${actionIcon('trash')}</button></div></div>`;}).join('')}</div>`;
 }
 function formatViewers(n) {
   if (!n) return '0';
@@ -2585,7 +2852,8 @@ async function checkQueueLive() {
   clearTimeout(_queueLiveTimer);
   _queueLiveTimer = setTimeout(async () => {
     try {
-      const names = channels.map(c => c.name).join(',');
+      const names = channels.filter(c => !isVod(c)).map(c => c.name).join(',');
+      if (!names) return;
       const params = new URLSearchParams({ canales: names });
       const r = await apiFetch(`/api/live?${params}`, { signal: AbortSignal.timeout(8000) });
       if (!r.ok) return;
@@ -2616,7 +2884,12 @@ async function manualCheckLive() {
   const btn = document.getElementById('btn-checklive');
   btn.disabled = true; btn.textContent = '⏳ Consultando...';
   try {
-    const names = channels.map(c => c.name).join(',');
+    const names = channels.filter(c => !isVod(c)).map(c => c.name).join(',');
+    if (!names) {
+      toast('No hay canales live que consultar');
+      btn.disabled = false; btn.textContent = '🔴 Comprobar en vivo';
+      return;
+    }
     const params = new URLSearchParams({ canales: names });
     const r = await apiFetch(`/api/live?${params}`, { signal: AbortSignal.timeout(10000) });
     if (!r.ok) throw new Error();
@@ -2926,7 +3199,7 @@ document.addEventListener('keydown', e => {
   const tag = (document.activeElement?.tagName || '').toLowerCase();
   const inInput = tag === 'input' || tag === 'textarea' || tag === 'select';
   if (e.key === 'Enter' && document.activeElement.id === 'ch-input') addChannel();
-  if (e.key === 'Escape') closePreview({target: document.getElementById('preview-modal')});
+  if (e.key === 'Escape') { closePreview({target: document.getElementById('preview-modal')}); closeVods({target: document.getElementById('vod-modal')}); }
   if (inInput) return;
   if (e.key === 'a' || e.key === 'A') {
     e.preventDefault();
@@ -2948,7 +3221,7 @@ load();
 applyAccentColor();
 render();
 // reconectar IRC para canales activos al recargar
-channels.filter(c => c.status==='playing'||c.status==='grid-on').forEach(c => connectIRC(c.name));
+channels.filter(c => !isVod(c) && (c.status==='playing'||c.status==='grid-on')).forEach(c => connectIRC(c.name));
 updateEventChatSelector();
 checkServer();
 smartInterval(checkServer, 3000, 15000);

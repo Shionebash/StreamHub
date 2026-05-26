@@ -103,6 +103,7 @@ STATIC_FILES = {
     "/logo.png": "logo.png",
 }
 CHANNEL_RE = re.compile(r"^[a-z0-9_]{3,25}$")
+VOD_RE = re.compile(r"^[0-9]{5,20}$")
 QUALITY_RE = re.compile(r"^(best|worst|audio_only|source|[0-9]{3,4}p60?|[0-9]{3,4}p)$")
 PLAYERS = {"mpv", "vlc", "gridplayer"}
 HW_GPUS = {"nvidia", "amd", "intel"}
@@ -138,6 +139,7 @@ TWITCH_API_CACHE_TTL = {
     "recommended": 45,
     "search": 2 * 60,
     "cat_streams": 45,
+    "videos": 5 * 60,
 }
 _twitch_api_cache = {}
 _twitch_api_cache_lock = threading.Lock()
@@ -172,6 +174,41 @@ def normalize_channel(value):
     channel = channel.split("/")[0].split("?")[0]
     return channel if CHANNEL_RE.fullmatch(channel) else ""
 
+def normalize_vod_id(value):
+    text = str(value or "").strip()
+    match = re.search(r"(?:twitch\.tv/videos/|/videos/|^v?)([0-9]{5,20})(?:[/?#].*)?$", text, re.IGNORECASE)
+    vod_id = match.group(1) if match else text
+    return vod_id if VOD_RE.fullmatch(vod_id) else ""
+
+def normalize_play_target(data):
+    """Return a Twitch playback target for a live channel or VOD."""
+    if not isinstance(data, dict):
+        data = {}
+    vod_id = normalize_vod_id(data.get("vod_id") or data.get("vodId"))
+    media = data.get("media") or data.get("target") or data.get("url") or ""
+    if not vod_id and media:
+        vod_id = normalize_vod_id(media)
+    if vod_id:
+        return {
+            "type": "vod",
+            "key": f"v{vod_id}",
+            "label": f"VOD {vod_id}",
+            "url": f"https://www.twitch.tv/videos/{vod_id}",
+            "channel": "",
+            "vod_id": vod_id,
+        }
+    channel = normalize_channel(data.get("canal") or media)
+    if not channel:
+        return None
+    return {
+        "type": "channel",
+        "key": channel,
+        "label": channel,
+        "url": f"twitch.tv/{channel}",
+        "channel": channel,
+        "vod_id": "",
+    }
+
 def normalize_channels(values, limit=100):
     if not isinstance(values, list):
         return []
@@ -180,6 +217,16 @@ def normalize_channels(values, limit=100):
         channel = normalize_channel(value)
         if channel and channel not in result:
             result.append(channel)
+    return result
+
+def normalize_vod_ids(values, limit=100):
+    if not isinstance(values, list):
+        return []
+    result = []
+    for value in values[:limit]:
+        vod_id = normalize_vod_id(value)
+        if vod_id and vod_id not in result:
+            result.append(vod_id)
     return result
 
 def normalize_quality(value):
@@ -1296,6 +1343,67 @@ def _get_category_streams_uncached(game_id, token, client_id, cursor=""):
         print(f"  Error cat streams: {e}")
         return [], ""
 
+def get_channel_videos(channel, token, client_id, cursor="", video_type="archive"):
+    channel = normalize_channel(channel)
+    video_type = str(video_type or "archive").strip().lower()
+    if video_type not in {"archive", "highlight", "upload", "all"}:
+        video_type = "archive"
+    if not token or not client_id or not channel:
+        return {"channel": channel, "display_name": channel, "avatar": "", "videos": [], "cursor": ""}
+    key = ("videos", channel, cursor, video_type, client_id, hash(token))
+    return cached_twitch_api(key, TWITCH_API_CACHE_TTL["videos"], lambda: _get_channel_videos_uncached(channel, token, client_id, cursor, video_type))
+
+def _get_channel_videos_uncached(channel, token, client_id, cursor="", video_type="archive"):
+    try:
+        user_url = f"https://api.twitch.tv/helix/users?login={urllib.parse.quote(channel)}"
+        req = urllib.request.Request(user_url, headers=twitch_headers(token, client_id))
+        with urllib.request.urlopen(req, timeout=5) as r:
+            user_data = json.loads(r.read())
+        users = user_data.get("data", [])
+        if not users:
+            return {"channel": channel, "display_name": channel, "avatar": "", "videos": [], "cursor": ""}
+        user = users[0]
+        q = {
+            "user_id": user["id"],
+            "first": "24",
+            "sort": "time",
+        }
+        if video_type != "all":
+            q["type"] = video_type
+        if cursor:
+            q["after"] = cursor
+        videos_url = "https://api.twitch.tv/helix/videos?" + urllib.parse.urlencode(q)
+        req = urllib.request.Request(videos_url, headers=twitch_headers(token, client_id))
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read())
+        videos = []
+        for v in data.get("data", []):
+            thumb = v.get("thumbnail_url", "")
+            thumb = thumb.replace("%{width}", "320").replace("%{height}", "180")
+            thumb = thumb.replace("{width}", "320").replace("{height}", "180")
+            videos.append({
+                "id": str(v.get("id", "")),
+                "title": v.get("title", ""),
+                "description": v.get("description", ""),
+                "duration": v.get("duration", ""),
+                "created_at": v.get("created_at", ""),
+                "published_at": v.get("published_at", ""),
+                "views": v.get("view_count", 0),
+                "type": v.get("type", ""),
+                "url": v.get("url", f"https://www.twitch.tv/videos/{v.get('id', '')}"),
+                "thumbnail": thumb,
+            })
+        return {
+            "channel": channel,
+            "display_name": user.get("display_name", channel),
+            "avatar": user.get("profile_image_url", ""),
+            "videos": videos,
+            "cursor": data.get("pagination", {}).get("cursor", ""),
+        }
+    except Exception as e:
+        print(f"  Error videos {channel}: {e}")
+        return {"channel": channel, "display_name": channel, "avatar": "", "videos": [], "cursor": ""}
+
 def get_user_info(canales, token, client_id):
     if not token or not client_id or not canales:
         return {}
@@ -1324,7 +1432,7 @@ def _get_user_info_uncached(canales, token, client_id):
 
 # ── STREAMLINK / MPV ─────────────────────────────────────────
 
-def get_hls_url(canal, calidad, token, sl_path):
+def get_hls_url(canal, calidad, token, sl_path, source_url=None):
     # Clave de cache: "canal:audio" para audio_only, "canal" para video.
     # Evita que URLs de audio contaminen plays normales y viceversa.
     is_audio  = calidad == "audio_only"
@@ -1354,7 +1462,7 @@ def get_hls_url(canal, calidad, token, sl_path):
             a = [sl_path, "--stream-url"]
             if token:
                 a += ["--twitch-api-header", f"Authorization={token}"]
-            a += [f"twitch.tv/{canal}", q]
+            a += [source_url or f"twitch.tv/{canal}", q]
             if q == tried[0]:
                 print(f"  CMD: {sanitize_for_log(' '.join(a))}")
             result = subprocess.run(
@@ -1420,7 +1528,7 @@ def _quick_launch_error(proc, log, delay=0.8):
         tail = ""
     return f"El reproductor se cerro al iniciar (exit {code}). {tail}".strip()
 
-def lanzar_ventana(canal, calidad, token, mpv_path, sl_path, player_type="mpv", vlc_path="vlc", audio_only=False):
+def lanzar_ventana(canal, calidad, token, mpv_path, sl_path, player_type="mpv", vlc_path="vlc", audio_only=False, source_url=None, display_title=None, is_vod=False):
     vlc_path = vlc_gui_path(vlc_path)
     with lock:
         if canal in procesos:
@@ -1436,15 +1544,15 @@ def lanzar_ventana(canal, calidad, token, mpv_path, sl_path, player_type="mpv", 
         # Fix: get HLS URL directly (tries audio_only first, falls through to worst),
         # then launch player with --no-video as a real argument (not via --player-args string).
         print(f"  [{canal}] Solo-audio: obteniendo URL HLS...")
-        hls_url, got_q = get_hls_url(canal, "audio_only", token, sl_path)
+        hls_url, got_q = get_hls_url(canal, "audio_only", token, sl_path, source_url)
         if not hls_url:
             return False, "No se pudo obtener URL HLS"
         print(f"  [{canal}] Solo-audio con calidad={got_q}, lanzando player --no-video")
         if player_type == "vlc":
-            cmd = [vlc_path, f"--meta-title={canal}", "--no-video", "--qt-minimal-view", "--no-video-title-show", "--no-one-instance",
+            cmd = [vlc_path, f"--meta-title={display_title or canal}", "--no-video", "--qt-minimal-view", "--no-video-title-show", "--no-one-instance",
                    "--no-qt-privacy-ask", "--no-qt-error-dialogs", "--no-media-library", hls_url]
         else:
-            cmd = [mpv_path, "--no-video", f"--title={canal}",
+            cmd = [mpv_path, "--no-video", f"--title={display_title or canal}",
                    "--force-window=yes", "--volume=100", "--audio-exclusive=no", hls_url]
         try:
             with open(log, "w", encoding="utf-8", errors="replace") as log_f:
@@ -1464,12 +1572,12 @@ def lanzar_ventana(canal, calidad, token, mpv_path, sl_path, player_type="mpv", 
         # Avoid Streamlink's --player-args quoting layer for VLC on Windows.
         # Bad quoting can make VLC open its console help ("vlc-help.txt") and wait for ENTER.
         print(f"  [{canal}] VLC directo: obteniendo URL HLS...")
-        hls_url, got_q = get_hls_url(canal, calidad, token, sl_path)
+        hls_url, got_q = get_hls_url(canal, calidad, token, sl_path, source_url)
         if not hls_url:
             return False, "No se pudo obtener URL HLS"
         cmd = [
             vlc_path,
-            f"--meta-title={canal}",
+            f"--meta-title={display_title or canal}",
             "--qt-minimal-view",
             "--no-video-title-show",
             "--no-qt-privacy-ask",
@@ -1499,17 +1607,18 @@ def lanzar_ventana(canal, calidad, token, mpv_path, sl_path, player_type="mpv", 
         player_args = "--qt-minimal-view --no-video-title-show --no-one-instance --no-qt-privacy-ask --no-qt-error-dialogs --no-media-library"
     else:
         player_bin  = mpv_path
-        player_args = f"--title={canal} --force-window=yes --volume=70 --audio-exclusive=no"
+        player_args = f"--title={display_title or canal} --force-window=yes --volume=70 --audio-exclusive=no"
 
     args = [sl_path]
     if token:
         args += [f"--twitch-api-header=Authorization={token}"]
     args += [
-        "--twitch-low-latency",
         f"--player={player_bin}",
         f"--player-args={player_args}",
-        f"twitch.tv/{canal}", calidad
     ]
+    if not is_vod:
+        args.append("--twitch-low-latency")
+    args += [source_url or f"twitch.tv/{canal}", calidad]
     try:
         with open(log, "w", encoding="utf-8", errors="replace") as log_f:
             proc = subprocess.Popen(
@@ -1565,7 +1674,7 @@ def write_vlm_conf(video_pairs, audio_pairs, ancho, alto):
 
 def lanzar_grid(canales, calidad, token, mpv_path, sl_path, ffmpeg_path, ancho, alto,
                 player_type="mpv", vlc_path="vlc", gp_path="gridplayer",
-                hwaccel=False, hwgpu="nvidia", vlc_mosaic=True, canales_audio=[]):
+                hwaccel=False, hwgpu="nvidia", vlc_mosaic=True, canales_audio=[], vods=[], vods_audio=[]):
     global grid_proc
     _ensure_log_dirs()
     vlc_path = vlc_gui_path(vlc_path)
@@ -1574,11 +1683,15 @@ def lanzar_grid(canales, calidad, token, mpv_path, sl_path, ffmpeg_path, ancho, 
 
     # GridPlayer resuelve streams internamente — sin ffmpeg
     if player_type == "gridplayer":
-        all_ch = list(canales) + list(canales_audio)
+        all_ch = list(canales) + [f"v{v}" for v in vods] + list(canales_audio) + [f"v{v}" for v in vods_audio]
         if not all_ch:
             return False, "Ningun canal disponible", [], []
         try:
-            args = [gp_path] + [f"https://twitch.tv/{c}" for c in all_ch]
+            urls_gp = [f"https://twitch.tv/{c}" for c in canales]
+            urls_gp += [f"https://www.twitch.tv/videos/{v}" for v in vods]
+            urls_gp += [f"https://twitch.tv/{c}" for c in canales_audio]
+            urls_gp += [f"https://www.twitch.tv/videos/{v}" for v in vods_audio]
+            args = [gp_path] + urls_gp
             print(f"  CMD: {' '.join(args)}")
             proc = subprocess.Popen(args)
             grid_proc = {
@@ -1587,7 +1700,7 @@ def lanzar_grid(canales, calidad, token, mpv_path, sl_path, ffmpeg_path, ancho, 
                 "startedAt": time.time(),
                 "exitCode": None,
                 "validos": all_ch,
-                "audioOnly": list(canales_audio),
+                "audioOnly": list(canales_audio) + [f"v{v}" for v in vods_audio],
                 "fallidos": fallidos,
                 "log": _grid_log_path()
             }
@@ -1598,43 +1711,52 @@ def lanzar_grid(canales, calidad, token, mpv_path, sl_path, ffmpeg_path, ancho, 
             return False, str(e), [], []
 
     # ── Resolver URLs en paralelo ────────────────────────────────────
-    def _fetch_hls_task(canal, is_audio):
+    video_targets = (
+        [{"key": c, "url": f"twitch.tv/{c}", "label": c} for c in canales]
+        + [{"key": f"v{v}", "url": f"https://www.twitch.tv/videos/{v}", "label": f"VOD {v}"} for v in vods]
+    )
+    audio_targets = (
+        [{"key": c, "url": f"twitch.tv/{c}", "label": c} for c in canales_audio]
+        + [{"key": f"v{v}", "url": f"https://www.twitch.tv/videos/{v}", "label": f"VOD {v}"} for v in vods_audio]
+    )
+
+    def _fetch_hls_task(target, is_audio):
         q = "audio_only" if is_audio else calidad
-        url, got_q = get_hls_url(canal, q, token, sl_path)
-        return canal, url, got_q, is_audio
+        url, got_q = get_hls_url(target["key"], q, token, sl_path, target["url"])
+        return target, url, got_q, is_audio
 
     urls, validos = [], []
     audio_pairs = []  # (canal, url) para canales solo-audio
-    all_tasks = [(c, False) for c in canales] + [(c, True) for c in canales_audio]
+    all_tasks = [(t, False) for t in video_targets] + [(t, True) for t in audio_targets]
     if all_tasks:
         print(f"  Resolviendo {len(all_tasks)} URLs en paralelo...")
         fetch_results = {}
         with ThreadPoolExecutor(max_workers=min(8, len(all_tasks))) as ex:
-            fut_map = {ex.submit(_fetch_hls_task, c, ia): (c, ia) for c, ia in all_tasks}
+            fut_map = {ex.submit(_fetch_hls_task, t, ia): (t, ia) for t, ia in all_tasks}
             for fut in as_completed(fut_map):
                 try:
-                    canal, url, got_q, is_audio = fut.result()
-                    fetch_results[(canal, is_audio)] = (url, got_q)
+                    target, url, got_q, is_audio = fut.result()
+                    fetch_results[(target["key"], is_audio)] = (url, got_q)
                 except Exception as e:
-                    c, ia = fut_map[fut]
-                    fetch_results[(c, ia)] = (None, None)
-                    print(f"  ERROR fetch {c}: {e}")
-        for canal in canales:
-            url, got_q = fetch_results.get((canal, False), (None, None))
+                    target, ia = fut_map[fut]
+                    fetch_results[(target["key"], ia)] = (None, None)
+                    print(f"  ERROR fetch {target['label']}: {e}")
+        for target in video_targets:
+            url, got_q = fetch_results.get((target["key"], False), (None, None))
             if url:
-                urls.append(url); validos.append(canal)
-                print(f"  OK {canal} ({got_q})")
+                urls.append(url); validos.append(target["key"])
+                print(f"  OK {target['label']} ({got_q})")
             else:
-                fallidos.append({"canal": canal, "reason": "No se pudo obtener URL HLS"})
-                print(f"  FALLO {canal}")
-        for canal in canales_audio:
-            url, got_q = fetch_results.get((canal, True), (None, None))
+                fallidos.append({"canal": target["key"], "reason": "No se pudo obtener URL HLS"})
+                print(f"  FALLO {target['label']}")
+        for target in audio_targets:
+            url, got_q = fetch_results.get((target["key"], True), (None, None))
             if url:
-                audio_pairs.append((canal, url))
-                print(f"  OK audio {canal} ({got_q})")
+                audio_pairs.append((target["key"], url))
+                print(f"  OK audio {target['label']} ({got_q})")
             else:
-                fallidos.append({"canal": canal, "reason": "No se pudo obtener URL HLS audio"})
-                print(f"  FALLO audio {canal}")
+                fallidos.append({"canal": target["key"], "reason": "No se pudo obtener URL HLS audio"})
+                print(f"  FALLO audio {target['label']}")
 
     n_video = len(urls)
     n_audio = len(audio_pairs)
@@ -2268,6 +2390,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             streams, cur = get_category_streams(game_id, token, client_id, cursor)
             self.send_json({"streams": streams, "cursor": cur})
 
+        elif parsed.path == "/api/videos":
+            token, client_id = get_config_credentials()
+            canal = normalize_channel(qs.get("canal", [""])[0])
+            if not canal:
+                self.send_json({"ok": False, "error": "Canal invalido"}, 400)
+                return
+            cursor = qs.get("cursor", [""])[0]
+            video_type = qs.get("type", ["archive"])[0]
+            data = get_channel_videos(canal, token, client_id, cursor, video_type)
+            self.send_json({"ok": True, **data})
+
         elif parsed.path == "/api/token_status":
             expired = gql_is_token_expired()
             tok, _ = get_config_credentials()
@@ -2317,28 +2450,33 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         data   = self.read_body()
 
         if parsed.path == "/api/play":
-            canal = normalize_channel(data.get("canal", ""))
-            if not canal:
-                self.send_json({"ok": False, "error": "Canal invalido"}, 400)
+            target = normalize_play_target(data)
+            if not target:
+                self.send_json({"ok": False, "error": "Canal o VOD invalido"}, 400)
                 return
             token, _client_id = get_config_credentials()
             ok, msg = lanzar_ventana(
-                canal, normalize_quality(data.get("calidad", "best")), token,
+                target["key"], normalize_quality(data.get("calidad", "best")), token,
                 normalize_path_value(data.get("mpv"), "mpv"),
                 normalize_path_value(data.get("streamlink"), "streamlink"),
                 normalize_player(data.get("player", "mpv")),
                 normalize_path_value(data.get("vlc"), "vlc"),
-                audio_only=bool(data.get("audio_only", False))
+                audio_only=bool(data.get("audio_only", False)),
+                source_url=target["url"],
+                display_title=target["label"],
+                is_vod=target["type"] == "vod"
             )
-            self.send_json({"ok": ok, "canal": canal, "error": None if ok else msg, "state": streams_status().get(canal)})
+            self.send_json({"ok": ok, "canal": target["key"], "error": None if ok else msg, "state": streams_status().get(target["key"])})
 
         elif parsed.path == "/api/grid":
             print(f"  grid player={data.get('player')} gp={data.get('gp')} vlc_mosaic={data.get('vlc_mosaic',True)}")
             token, _client_id = get_config_credentials()
             canales = normalize_channels(data.get("canales", []))
             canales_audio = normalize_channels(data.get("canales_audio", []))
-            if not canales and not canales_audio:
-                self.send_json({"ok": False, "msg": "Ningun canal valido", "validos": []}, 400)
+            vods = normalize_vod_ids(data.get("vods", []))
+            vods_audio = normalize_vod_ids(data.get("vods_audio", []))
+            if not canales and not canales_audio and not vods and not vods_audio:
+                self.send_json({"ok": False, "msg": "Ningun canal o VOD valido", "validos": []}, 400)
                 return
             result = lanzar_grid(
                 canales, normalize_quality(data.get("calidad", "best")),
@@ -2354,7 +2492,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 hwaccel=bool(data.get("hwaccel",False)),
                 hwgpu=data.get("hwgpu","nvidia") if data.get("hwgpu","nvidia") in HW_GPUS else "nvidia",
                 vlc_mosaic=bool(data.get("vlc_mosaic", True)),
-                canales_audio=canales_audio
+                canales_audio=canales_audio,
+                vods=vods,
+                vods_audio=vods_audio
             )
             if len(result) == 3:
                 ok, msg, validos = result
@@ -2530,10 +2670,8 @@ def main():
             save_config(cfg)
             print("  Token migrado a almacenamiento seguro.")
 
-    # Configure GQL client ID from config (allows user override)
-    gql_client_cfg = cfg.get("clientId") or cfg.get("client_id", "")
-    if gql_client_cfg:
-        gql_set_client(gql_client_cfg)
+    # GQL uses Twitch's web client ID; the configured Client ID is only for Helix.
+    # Using arbitrary Helix app IDs here causes Twitch GQL to return HTTP 400.
 
     server = ReuseServer((HOST, PORT), Handler)
 
