@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local runtime state
+config.json
+config.json.bak
+url_cache.json
+mosaic-vlm.conf
+vlc_bg.ts
+logs streams/
+logs app/
+runtime app/
+*.log
+*.bak
+*.tmp
+REDESIGN_PLAN.md
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,16 @@
+# Python dependencies for StreamHub.
+#
+# External programs still required through PATH or config.json:
+# - ffmpeg
+# - mpv or VLC
+# - optional: GridPlayer
+
+# Provides the streamlink CLI/module used to resolve Twitch stream URLs.
+streamlink>=7.0
+
+# Required by pubsub.py for Twitch PubSub / channel points mining.
+websocket-client>=1.8
+
+# Secure token storage (OS credential store + Fernet fallback).
+keyring>=24.0
+cryptography>=42.0

@@ -1,0 +1,20 @@
+{
+  "player": "mpv",
+  "mpv": "mpv",
+  "vlc": "vlc",
+  "gp": "gridplayer",
+  "ff": "ffmpeg",
+  "sl": "streamlink",
+  "quality": "480p",
+  "w": 1920,
+  "h": 1080,
+  "hwaccel": false,
+  "hwgpu": "nvidia",
+  "vlcFfmpeg": false,
+  "textOnly": false,
+  "accentColor": "#e0553a",
+  "clientId": "",
+  "token": "",
+  "refresh_token": "",
+  "miningEnabled": false
+}
