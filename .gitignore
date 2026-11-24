@@ -1,22 +1,20 @@
-.venv/
-__pycache__/
-*.py[cod]
-
-# Local runtime state
-config.json
-config.json.bak
-url_cache.json
-mosaic-vlm.conf
-vlc_bg.ts
-logs streams/
-logs app/
-runtime app/
+# Rust build artifacts
+/target/
+/dist/
 *.log
 *.bak
 *.tmp
-REDESIGN_PLAN.md
 
-# OS/editor noise
+# Local runtime & legacy workspace noise
+.venv/
+__pycache__/
+config.json
+config.json.bak
+logs app/
+logs streams/
+runtime app/
+
+# OS / Editor
 .DS_Store
 Thumbs.db
 .vscode/

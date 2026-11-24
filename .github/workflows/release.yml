@@ -1,0 +1,58 @@
+name: Release Windows Binary
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0, v1.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run unit tests
+        run: cargo test --locked
+
+      - name: Build release binary
+        run: cargo build --release --locked
+
+      - name: Package Windows release assets
+        shell: pwsh
+        run: |
+          $tag = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
+          $stage = "dist/package"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "target/release/streamhub.exe" "$stage/streamhub.exe"
+          Copy-Item "libmpv/libmpv-2.dll" "$stage/libmpv-2.dll"
+          $zipName = "StreamHub-$tag-windows-x64.zip"
+          Compress-Archive -Path "$stage/*" -DestinationPath "dist/$zipName" -Force
+          Copy-Item "target/release/streamhub.exe" "dist/streamhub.exe"
+          echo "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
+          echo "ZIP_PATH=dist/$zipName" >> $env:GITHUB_ENV
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: StreamHub ${{ env.RELEASE_TAG }}
+          generate_release_notes: true
+          files: |
+            ${{ env.ZIP_PATH }}
+            dist/streamhub.exe
