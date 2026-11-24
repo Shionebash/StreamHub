@@ -1,9 +1,6 @@
 name: Release Windows Binary
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       tag:
@@ -27,8 +24,8 @@ jobs:
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Run unit tests
-        run: cargo test --locked
+      - name: Run offline unit tests
+        run: cargo test --locked -- --skip ws::tests::connects_to_twitch_
 
       - name: Build release binary
         run: cargo build --release --locked

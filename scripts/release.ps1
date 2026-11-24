@@ -105,8 +105,51 @@ try {
 
     if (-not $NoPush) {
         & $gitExe push origin HEAD
-        & $gitExe push origin $tagVersion
-        Write-Host "Pushed $tagVersion to origin. GitHub Actions will publish the release."
+        & $gitExe push origin $tagVersion --force
+
+        if (-not $SkipBuild) {
+            Write-Host "Publishing GitHub Release $tagVersion with local build assets..."
+            $credOut = "protocol=https`nhost=github.com`n`n" | & $gitExe credential fill
+            $token = ($credOut | Where-Object { $_ -like 'password=*' } | Select-Object -First 1) -replace '^password=',''
+            if (-not $token) {
+                throw "Could not retrieve GitHub token from git credential manager."
+            }
+            $headers = @{
+                'Authorization' = "Bearer $token"
+                'Accept'        = 'application/vnd.github+json'
+                'User-Agent'    = 'StreamHub-Release'
+            }
+            $repoApi = 'https://api.github.com/repos/Shionebash/StreamHub'
+            try {
+                $rel = Invoke-RestMethod -Uri "$repoApi/releases/tags/$tagVersion" -Headers $headers
+            } catch {
+                $body = @{
+                    tag_name               = $tagVersion
+                    name                   = "StreamHub $tagVersion"
+                    generate_release_notes = $true
+                    draft                  = $false
+                    prerelease             = $false
+                } | ConvertTo-Json
+                $rel = Invoke-RestMethod -Method Post -Uri "$repoApi/releases" -Headers $headers -Body $body -ContentType 'application/json'
+            }
+            $uploadBase = ($rel.upload_url -replace '\{\?name,label\}$','')
+            $zipName = "StreamHub-$tagVersion-windows-x64.zip"
+            $exePath = Join-Path $repoRoot "target\release\streamhub.exe"
+            foreach ($existing in $rel.assets) {
+                if ($existing.name -in @('streamhub.exe', $zipName)) {
+                    Invoke-RestMethod -Method Delete -Uri $existing.url -Headers $headers | Out-Null
+                }
+            }
+            foreach ($asset in @(
+                @{ Path = $zipPath; Name = $zipName; Mime = 'application/zip' },
+                @{ Path = $exePath; Name = 'streamhub.exe'; Mime = 'application/octet-stream' }
+            )) {
+                $uploadUrl = $uploadBase + '?name=' + [uri]::EscapeDataString($asset.Name)
+                $up = Invoke-RestMethod -Method Post -Uri $uploadUrl -Headers $headers -InFile $asset.Path -ContentType $asset.Mime
+                Write-Host "Uploaded: $($up.name) -> $($up.browser_download_url)"
+            }
+            Write-Host "Published release: $($rel.html_url)"
+        }
     } else {
         Write-Host "Prepared tag $tagVersion locally (-NoPush)."
     }
